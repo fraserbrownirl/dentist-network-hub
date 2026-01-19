@@ -74,21 +74,20 @@ export const LeadGenerationForm = ({ dentistId, onJobCreated }: LeadGenerationFo
 
       if (error) throw error;
 
-      // Submit to n8n webhook with expected format
-      const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL || "https://ycrstudbmkbxzgtbnclz.supabase.co/functions/v1/webhook-receiver";
-      
-      await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Job-ID": job.id, // Pass job_id in header for tracking
-        },
-        body: JSON.stringify({
+      // Submit to webhook via Supabase edge function
+      const { error: webhookError } = await supabase.functions.invoke('webhook-receiver', {
+        body: {
+          job_id: job.id,
           keyword: formData.keyword,
           country: formData.country,
           city: formData.city
-        }),
+        },
       });
+
+      if (webhookError) {
+        console.warn('Webhook trigger failed:', webhookError);
+        // Job was created, just webhook failed - still show success
+      }
 
       toast({
         title: "Success",

@@ -52,27 +52,29 @@ const CityPage = () => {
         setCityData(cityInfo);
 
         // Fetch active offers for this city
-        const { data: offersData, error } = await supabase
-          .from('offers')
-          .select(`
-            *,
-            dentists:dentist_id (
-              practice_name,
-              contact_name,
-              phone,
-              address
-            )
-          `)
-          .eq('is_active', true)
-          .eq('cities.slug', citySlug);
+        if (cityInfo) {
+          const { data: offersData, error } = await supabase
+            .from('offers')
+            .select(`
+              *,
+              dentists:dentist_id (
+                practice_name,
+                contact_name,
+                phone,
+                address
+              )
+            `)
+            .eq('is_active', true)
+            .eq('city_id', cityInfo.id);
 
-        if (error) {
-          console.error('Error fetching offers:', error);
-        } else {
-          setOffers(offersData?.map(offer => ({
-            ...offer,
-            dentist: offer.dentists
-          })) || []);
+          if (error) {
+            console.error('Error fetching offers:', error);
+          } else {
+            setOffers(offersData?.map(offer => ({
+              ...offer,
+              dentist: offer.dentists
+            })) || []);
+          }
         }
       } catch (error) {
         console.error('Error:', error);
