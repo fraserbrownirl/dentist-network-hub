@@ -90,7 +90,6 @@ interface SimilarityResult {
     similarity: number;
   } | null;
   status: 'passed' | 'flagged';
-  rewrite_mode: string;
 }
 
 const SIMILARITY_THRESHOLD = 0.85;
@@ -101,7 +100,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { sourceContent, generatedContent, rewriteMode = 'patient_experience' } = await req.json();
+    const { sourceContent, generatedContent } = await req.json();
 
     if (!sourceContent || !generatedContent) {
       return new Response(
@@ -141,8 +140,7 @@ Deno.serve(async (req) => {
       source_hash: computeHash(sourceContent),
       max_similarity: Math.round(maxSimilarity * 1000) / 1000,
       worst_chunk_pair: worstPair,
-      status: maxSimilarity >= SIMILARITY_THRESHOLD ? 'flagged' : 'passed',
-      rewrite_mode: rewriteMode
+      status: maxSimilarity >= SIMILARITY_THRESHOLD ? 'flagged' : 'passed'
     };
 
     console.log(`Similarity check complete: ${result.status} (max: ${result.max_similarity})`);
