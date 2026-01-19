@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Globe, Sparkles, ArrowRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ScrapedData {
   markdown?: string;
@@ -27,6 +26,42 @@ interface SEOContent {
   faq: Array<{ question: string; answer: string }>;
 }
 
+function assertEnv(value: string | undefined, name: string): string {
+  if (!value) throw new Error(`${name} is not configured`);
+  return value;
+}
+
+async function invokeBackendFunction<T>(functionName: string, body: unknown): Promise<T> {
+  const baseUrl = assertEnv(import.meta.env.VITE_SUPABASE_URL, 'VITE_SUPABASE_URL');
+  const publishableKey = assertEnv(
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    'VITE_SUPABASE_PUBLISHABLE_KEY'
+  );
+
+  const resp = await fetch(`${baseUrl}/functions/v1/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${publishableKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  let json: any = null;
+  try {
+    json = await resp.json();
+  } catch {
+    json = null;
+  }
+
+  if (!resp.ok) {
+    const msg = json?.error || json?.message || `Request failed (${resp.status})`;
+    throw new Error(msg);
+  }
+
+  return json as T;
+}
+
 export default function ScrapeTestPage() {
   const { toast } = useToast();
   const [url, setUrl] = useState('https://www.209nycdental.com/');
@@ -46,18 +81,13 @@ export default function ScrapeTestPage() {
     setSeoContent(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('scrape-website', {
-        body: { url }
-      });
+      const result = await invokeBackendFunction<any>('scrape-website', { url });
 
-      if (error) throw error;
-
-      if (data.success === false) {
-        throw new Error(data.error || 'Scraping failed');
+      if (result?.success === false) {
+        throw new Error(result.error || 'Scraping failed');
       }
 
-      // Access nested data structure
-      const scraped = data.data || data;
+      const scraped = result?.data ?? result;
       setScrapedData(scraped);
       toast({ title: 'Success', description: 'Website scraped successfully!' });
     } catch (error) {
@@ -81,23 +111,19 @@ export default function ScrapeTestPage() {
     setIsSeoLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-seo-content', {
-        body: {
-          markdown: scrapedData.markdown,
-          businessName: scrapedData.metadata?.title,
-          address: '209 E 56th St, New York, NY 10022',
-          rating: 4.3,
-          reviewsCount: 150
-        }
+      const result = await invokeBackendFunction<any>('generate-seo-content', {
+        markdown: scrapedData.markdown,
+        businessName: scrapedData.metadata?.title,
+        address: '209 E 56th St, New York, NY 10022',
+        rating: 4.3,
+        reviewsCount: 150,
       });
 
-      if (error) throw error;
-
-      if (data.success === false) {
-        throw new Error(data.error || 'SEO generation failed');
+      if (result?.success === false) {
+        throw new Error(result.error || 'SEO generation failed');
       }
 
-      setSeoContent(data.data);
+      setSeoContent(result.data);
       toast({ title: 'Success', description: 'SEO content generated!' });
     } catch (error) {
       console.error('SEO generation error:', error);
