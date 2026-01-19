@@ -1,1 +1,10 @@
 project_id = "fffcgntnccvpsdnpdgaf"
+
+[functions.webhook-receiver]
+verify_jwt = false
+
+[functions.scrape-website]
+verify_jwt = false
+
+[functions.generate-seo-content]
+verify_jwt = false
