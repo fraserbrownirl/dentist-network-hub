@@ -1,0 +1,158 @@
+name: Daily Dentist Scraper
+
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub UI
+    inputs:
+      batch_size:
+        description: 'Number of cities to scrape this run'
+        required: false
+        default: '5'
+
+env:
+  BATCH_SIZE: ${{ github.event.inputs.batch_size || '5' }}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Get next batch of cities
+        id: batch
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+
+          # Read progress
+          progress_file = 'scraper/progress.json'
+          with open(progress_file, 'r') as f:
+              progress = json.load(f)
+
+          # Read cities (skip comments and empty lines)
+          with open('scraper/cities.txt', 'r') as f:
+              cities = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+
+          total = len(cities)
+          start = progress['last_index']
+          batch_size = int(os.environ.get('BATCH_SIZE', 5))
+
+          # Wrap around if we've completed all cities
+          if start >= total:
+              start = 0
+              print("Completed full cycle, starting over!")
+
+          end = min(start + batch_size, total)
+          batch = cities[start:end]
+
+          # Write batch to temp file for scraper
+          with open('scraper/batch_queries.txt', 'w') as f:
+              f.write('\n'.join(batch))
+
+          # Output for logging
+          print(f"Processing cities {start+1} to {end} of {total}")
+          print(f"Cities: {batch}")
+
+          # Set outputs
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"start={start}\n")
+              f.write(f"end={end}\n")
+              f.write(f"total={total}\n")
+              f.write(f"count={len(batch)}\n")
+          EOF
+
+      - name: Run Google Maps Scraper
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/scraper:/app \
+            gosom/google-maps-scraper \
+            -input /app/batch_queries.txt \
+            -results /app/batch_results.csv \
+            -exit-on-inactivity 2m \
+            -depth 1 \
+            -c 2
+
+      - name: Append results and update progress
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+          from datetime import datetime
+
+          # Read current progress
+          with open('scraper/progress.json', 'r') as f:
+              progress = json.load(f)
+
+          # Read cities for total count
+          with open('scraper/cities.txt', 'r') as f:
+              cities = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+
+          # Read batch that was processed
+          with open('scraper/batch_queries.txt', 'r') as f:
+              batch = [line.strip() for line in f if line.strip()]
+
+          # Append batch results to main results file
+          results_file = 'scraper/all_results.csv'
+          batch_file = 'scraper/batch_results.csv'
+
+          if os.path.exists(batch_file):
+              with open(batch_file, 'r') as f:
+                  batch_content = f.read()
+
+              # If main file doesn't exist, include header
+              if not os.path.exists(results_file):
+                  with open(results_file, 'w') as f:
+                      f.write(batch_content)
+              else:
+                  # Skip header line when appending
+                  lines = batch_content.strip().split('\n')
+                  if len(lines) > 1:
+                      with open(results_file, 'a') as f:
+                          f.write('\n' + '\n'.join(lines[1:]))
+
+              # Clean up batch file
+              os.remove(batch_file)
+
+          # Update progress
+          batch_size = int(os.environ.get('BATCH_SIZE', 5))
+          new_index = progress['last_index'] + batch_size
+          if new_index >= len(cities):
+              new_index = 0  # Reset for next cycle
+
+          progress['last_index'] = new_index
+          progress['total_cities'] = len(cities)
+          progress['last_run'] = datetime.utcnow().isoformat()
+          progress['cities_scraped'].extend(batch)
+
+          # Keep only last 50 entries in history to avoid file bloat
+          progress['cities_scraped'] = progress['cities_scraped'][-50:]
+
+          with open('scraper/progress.json', 'w') as f:
+              json.dump(progress, f, indent=2)
+
+          print(f"Updated progress: next index = {new_index}")
+          EOF
+
+      - name: Clean up temp files
+        run: |
+          rm -f scraper/batch_queries.txt
+
+      - name: Commit results
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add scraper/all_results.csv scraper/progress.json
+          git diff --staged --quiet || git commit -m "Scrape results: cities ${{ steps.batch.outputs.start }}-${{ steps.batch.outputs.end }} of ${{ steps.batch.outputs.total }}"
+          git push

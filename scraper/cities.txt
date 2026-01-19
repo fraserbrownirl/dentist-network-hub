@@ -1,0 +1,234 @@
+# North America - United States
+dentists New York, USA
+dentists Los Angeles, USA
+dentists Chicago, USA
+dentists Houston, USA
+dentists Phoenix, USA
+dentists Philadelphia, USA
+dentists San Antonio, USA
+dentists San Diego, USA
+dentists Dallas, USA
+dentists San Jose, USA
+dentists Austin, USA
+dentists Jacksonville, USA
+dentists Fort Worth, USA
+dentists Columbus, USA
+dentists Charlotte, USA
+dentists San Francisco, USA
+dentists Indianapolis, USA
+dentists Seattle, USA
+dentists Denver, USA
+dentists Boston, USA
+dentists Nashville, USA
+dentists Portland, USA
+dentists Las Vegas, USA
+dentists Detroit, USA
+dentists Memphis, USA
+dentists Louisville, USA
+dentists Baltimore, USA
+dentists Milwaukee, USA
+dentists Albuquerque, USA
+dentists Tucson, USA
+dentists Fresno, USA
+dentists Sacramento, USA
+dentists Atlanta, USA
+dentists Miami, USA
+dentists Minneapolis, USA
+dentists New Orleans, USA
+dentists Cleveland, USA
+dentists Pittsburgh, USA
+dentists St. Louis, USA
+dentists Tampa, USA
+dentists Orlando, USA
+dentists Honolulu, USA
+dentists Salt Lake City, USA
+dentists Kansas City, USA
+dentists Raleigh, USA
+dentists Virginia Beach, USA
+
+# North America - Canada
+dentists Toronto, Canada
+dentists Montreal, Canada
+dentists Vancouver, Canada
+dentists Calgary, Canada
+dentists Edmonton, Canada
+dentists Ottawa, Canada
+dentists Winnipeg, Canada
+dentists Quebec City, Canada
+dentists Hamilton, Canada
+dentists Halifax, Canada
+
+# North America - Mexico
+dentists Mexico City, Mexico
+dentists Guadalajara, Mexico
+dentists Monterrey, Mexico
+dentists Cancun, Mexico
+dentists Tijuana, Mexico
+dentists Puebla, Mexico
+
+# Europe - United Kingdom
+dentists London, UK
+dentists Manchester, UK
+dentists Birmingham, UK
+dentists Glasgow, UK
+dentists Liverpool, UK
+dentists Edinburgh, UK
+dentists Bristol, UK
+dentists Leeds, UK
+dentists Cardiff, UK
+dentists Belfast, UK
+
+# Europe - Germany
+dentists Berlin, Germany
+dentists Munich, Germany
+dentists Frankfurt, Germany
+dentists Hamburg, Germany
+dentists Cologne, Germany
+dentists Dusseldorf, Germany
+dentists Stuttgart, Germany
+
+# Europe - France
+dentists Paris, France
+dentists Marseille, France
+dentists Lyon, France
+dentists Toulouse, France
+dentists Nice, France
+dentists Bordeaux, France
+
+# Europe - Spain
+dentists Madrid, Spain
+dentists Barcelona, Spain
+dentists Valencia, Spain
+dentists Seville, Spain
+dentists Malaga, Spain
+dentists Bilbao, Spain
+
+# Europe - Italy
+dentists Rome, Italy
+dentists Milan, Italy
+dentists Naples, Italy
+dentists Turin, Italy
+dentists Florence, Italy
+dentists Venice, Italy
+
+# Europe - Netherlands
+dentists Amsterdam, Netherlands
+dentists Rotterdam, Netherlands
+dentists The Hague, Netherlands
+
+# Europe - Other
+dentists Vienna, Austria
+dentists Zurich, Switzerland
+dentists Geneva, Switzerland
+dentists Brussels, Belgium
+dentists Dublin, Ireland
+dentists Lisbon, Portugal
+dentists Porto, Portugal
+dentists Copenhagen, Denmark
+dentists Stockholm, Sweden
+dentists Oslo, Norway
+dentists Helsinki, Finland
+dentists Warsaw, Poland
+dentists Krakow, Poland
+dentists Prague, Czech Republic
+dentists Budapest, Hungary
+dentists Athens, Greece
+
+# Asia - Japan
+dentists Tokyo, Japan
+dentists Osaka, Japan
+dentists Kyoto, Japan
+dentists Yokohama, Japan
+dentists Nagoya, Japan
+dentists Fukuoka, Japan
+
+# Asia - South Korea
+dentists Seoul, South Korea
+dentists Busan, South Korea
+dentists Incheon, South Korea
+
+# Asia - China
+dentists Shanghai, China
+dentists Beijing, China
+dentists Shenzhen, China
+dentists Guangzhou, China
+dentists Hong Kong
+dentists Hangzhou, China
+dentists Chengdu, China
+
+# Asia - Southeast Asia
+dentists Singapore
+dentists Bangkok, Thailand
+dentists Kuala Lumpur, Malaysia
+dentists Jakarta, Indonesia
+dentists Manila, Philippines
+dentists Ho Chi Minh City, Vietnam
+dentists Hanoi, Vietnam
+
+# Asia - South Asia
+dentists Mumbai, India
+dentists Delhi, India
+dentists Bangalore, India
+dentists Chennai, India
+dentists Kolkata, India
+dentists Hyderabad, India
+dentists Pune, India
+
+# Asia - Middle East
+dentists Dubai, UAE
+dentists Abu Dhabi, UAE
+dentists Tel Aviv, Israel
+dentists Jerusalem, Israel
+dentists Riyadh, Saudi Arabia
+dentists Jeddah, Saudi Arabia
+dentists Doha, Qatar
+dentists Kuwait City, Kuwait
+dentists Amman, Jordan
+dentists Beirut, Lebanon
+dentists Istanbul, Turkey
+dentists Ankara, Turkey
+
+# Oceania
+dentists Sydney, Australia
+dentists Melbourne, Australia
+dentists Brisbane, Australia
+dentists Perth, Australia
+dentists Adelaide, Australia
+dentists Auckland, New Zealand
+dentists Wellington, New Zealand
+dentists Christchurch, New Zealand
+
+# South America
+dentists Sao Paulo, Brazil
+dentists Rio de Janeiro, Brazil
+dentists Brasilia, Brazil
+dentists Buenos Aires, Argentina
+dentists Mendoza, Argentina
+dentists Santiago, Chile
+dentists Lima, Peru
+dentists Bogota, Colombia
+dentists Medellin, Colombia
+dentists Caracas, Venezuela
+dentists Quito, Ecuador
+dentists Montevideo, Uruguay
+
+# Africa
+dentists Cairo, Egypt
+dentists Alexandria, Egypt
+dentists Johannesburg, South Africa
+dentists Cape Town, South Africa
+dentists Durban, South Africa
+dentists Nairobi, Kenya
+dentists Lagos, Nigeria
+dentists Casablanca, Morocco
+dentists Marrakech, Morocco
+dentists Tunis, Tunisia
+dentists Accra, Ghana
+dentists Addis Ababa, Ethiopia
+
+# Caribbean
+dentists San Juan, Puerto Rico
+dentists Nassau, Bahamas
+dentists Kingston, Jamaica
+dentists Santo Domingo, Dominican Republic
+dentists Havana, Cuba
