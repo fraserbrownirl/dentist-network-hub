@@ -5,7 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Loader2, Globe, Sparkles, ArrowRight, Quote, Shield, Code, ChevronDown, Copy, Check } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { 
+  Loader2, Globe, Sparkles, ArrowRight, Quote, Shield, Code, 
+  ChevronDown, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2,
+  TrendingUp, BarChart3
+} from 'lucide-react';
+import type { 
+  AuthoritySignal, 
+  ComparativePosition, 
+  ContentIntegrity, 
+  RewriteMode,
+  SEOContent as SEOContentType
+} from '@/lib/geo-types';
+import { REWRITE_MODE_DESCRIPTIONS } from '@/lib/geo-types';
 
 interface ScrapedData {
   markdown?: string;
@@ -27,8 +42,9 @@ interface SEOContent {
   profile_content: string;
   faq: Array<{ question: string; answer: string }>;
   quotable_facts?: string[];
-  authority_signals?: string[];
+  authority_signals?: AuthoritySignal[];
   schema_json_ld?: object;
+  rewrite_mode?: string;
 }
 
 function assertEnv(value: string | undefined, name: string): string {
@@ -67,16 +83,37 @@ async function invokeBackendFunction<T>(functionName: string, body: unknown): Pr
   return json as T;
 }
 
+// Confidence color helper
+function getConfidenceColor(confidence: number): string {
+  if (confidence >= 0.8) return 'bg-green-500';
+  if (confidence >= 0.6) return 'bg-yellow-500';
+  if (confidence >= 0.4) return 'bg-orange-500';
+  return 'bg-red-500';
+}
+
+function getConfidenceLabel(confidence: number): string {
+  if (confidence >= 0.8) return 'High';
+  if (confidence >= 0.6) return 'Medium';
+  if (confidence >= 0.4) return 'Low';
+  return 'Very Low';
+}
+
 export default function ScrapeTestPage() {
   const { toast } = useToast();
   const [url, setUrl] = useState('https://www.209nycdental.com/');
   const [isScrapingLoading, setIsScrapingLoading] = useState(false);
   const [isSeoLoading, setIsSeoLoading] = useState(false);
+  const [isSimilarityLoading, setIsSimilarityLoading] = useState(false);
+  const [isComparativeLoading, setIsComparativeLoading] = useState(false);
   const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
   const [seoContent, setSeoContent] = useState<SEOContent | null>(null);
+  const [contentIntegrity, setContentIntegrity] = useState<ContentIntegrity | null>(null);
+  const [comparativePositioning, setComparativePositioning] = useState<ComparativePosition[] | null>(null);
+  const [rewriteMode, setRewriteMode] = useState<RewriteMode>('patient_experience');
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [copiedFact, setCopiedFact] = useState<number | null>(null);
   const [copiedSchema, setCopiedSchema] = useState(false);
+  const [worstChunkOpen, setWorstChunkOpen] = useState(false);
 
   const copyToClipboard = async (text: string, factIndex?: number) => {
     await navigator.clipboard.writeText(text);
@@ -98,6 +135,8 @@ export default function ScrapeTestPage() {
     setIsScrapingLoading(true);
     setScrapedData(null);
     setSeoContent(null);
+    setContentIntegrity(null);
+    setComparativePositioning(null);
 
     try {
       const result = await invokeBackendFunction<any>('scrape-website', { url });
@@ -128,6 +167,8 @@ export default function ScrapeTestPage() {
     }
 
     setIsSeoLoading(true);
+    setContentIntegrity(null);
+    setComparativePositioning(null);
 
     try {
       const result = await invokeBackendFunction<any>('generate-seo-content', {
@@ -136,6 +177,7 @@ export default function ScrapeTestPage() {
         address: '209 E 56th St, New York, NY 10022',
         rating: 4.3,
         reviewsCount: 150,
+        rewriteMode: rewriteMode,
       });
 
       if (result?.success === false) {
@@ -143,7 +185,12 @@ export default function ScrapeTestPage() {
       }
 
       setSeoContent(result.data);
-      toast({ title: 'Success', description: 'SEO content generated!' });
+      toast({ title: 'Success', description: `SEO content generated with ${rewriteMode} mode!` });
+
+      // Automatically run similarity check
+      handleSimilarityCheck(result.data.profile_content);
+      // Automatically compute comparative positioning
+      handleComparativePositioning();
     } catch (error) {
       console.error('SEO generation error:', error);
       toast({
@@ -156,20 +203,80 @@ export default function ScrapeTestPage() {
     }
   };
 
+  const handleSimilarityCheck = async (generatedContent?: string) => {
+    if (!scrapedData?.markdown) return;
+    
+    const content = generatedContent || seoContent?.profile_content;
+    if (!content) return;
+
+    setIsSimilarityLoading(true);
+
+    try {
+      const result = await invokeBackendFunction<any>('compute-similarity', {
+        sourceContent: scrapedData.markdown,
+        generatedContent: content,
+        rewriteMode: rewriteMode,
+      });
+
+      if (result?.success === false) {
+        throw new Error(result.error || 'Similarity check failed');
+      }
+
+      setContentIntegrity(result.data);
+    } catch (error) {
+      console.error('Similarity check error:', error);
+      toast({
+        title: 'Similarity Check Failed',
+        description: error instanceof Error ? error.message : 'Failed to check similarity',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSimilarityLoading(false);
+    }
+  };
+
+  const handleComparativePositioning = async () => {
+    setIsComparativeLoading(true);
+
+    try {
+      const result = await invokeBackendFunction<any>('compute-comparative-positioning', {
+        businessData: {
+          name: scrapedData?.metadata?.title,
+          address: '209 E 56th St, New York, NY 10022',
+          rating: 4.3,
+          reviewsCount: 150,
+        },
+        scope: 'city',
+        metrics: ['rating', 'reviews'],
+      });
+
+      if (result?.success === false) {
+        throw new Error(result.error || 'Comparative positioning failed');
+      }
+
+      setComparativePositioning(result.data);
+    } catch (error) {
+      console.error('Comparative positioning error:', error);
+      // Don't show toast for this - it's a supplementary feature
+    } finally {
+      setIsComparativeLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Firecrawl + AI Demo</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">GEO Content Generation Pipeline</h1>
           <p className="text-muted-foreground">
-            Scrape a dental website and generate unique SEO content with AI
+            Scrape websites, generate LLM-optimized content with confidence-weighted authority signals
           </p>
         </div>
 
         {/* Controls */}
         <Card className="mb-6">
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex gap-4 items-end flex-wrap">
               <div className="flex-1 min-w-[300px]">
                 <label className="text-sm font-medium text-foreground mb-2 block">
@@ -209,8 +316,131 @@ export default function ScrapeTestPage() {
                 Generate SEO Content
               </Button>
             </div>
+
+            {/* Rewrite Mode Selector */}
+            <div className="pt-4 border-t border-border">
+              <label className="text-sm font-medium text-foreground mb-3 block">
+                Rewrite Mode (Narrative Frame)
+              </label>
+              <RadioGroup 
+                value={rewriteMode} 
+                onValueChange={(v) => setRewriteMode(v as RewriteMode)}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+              >
+                {(Object.entries(REWRITE_MODE_DESCRIPTIONS) as [RewriteMode, string][]).map(([mode, description]) => (
+                  <div key={mode} className="flex items-start space-x-2">
+                    <RadioGroupItem value={mode} id={mode} className="mt-1" />
+                    <Label htmlFor={mode} className="text-sm cursor-pointer">
+                      <span className="font-medium capitalize">{mode.replace(/_/g, ' ')}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Content Integrity Dashboard */}
+        {(contentIntegrity || isSimilarityLoading) && (
+          <Card className="mb-6 border-2 border-primary/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Content Integrity Dashboard
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isSimilarityLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking content similarity...
+                </div>
+              ) : contentIntegrity && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-muted-foreground">Similarity Score</span>
+                        <span className="text-sm font-medium">
+                          {(contentIntegrity.max_similarity * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <Progress 
+                        value={contentIntegrity.max_similarity * 100} 
+                        className={contentIntegrity.status === 'flagged' ? '[&>div]:bg-destructive' : '[&>div]:bg-green-500'}
+                      />
+                    </div>
+                    <Badge 
+                      variant={contentIntegrity.status === 'passed' ? 'default' : 'destructive'}
+                      className="gap-1"
+                    >
+                      {contentIntegrity.status === 'passed' ? (
+                        <CheckCircle2 className="h-3 w-3" />
+                      ) : (
+                        <AlertTriangle className="h-3 w-3" />
+                      )}
+                      {contentIntegrity.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Rewrite Mode: </span>
+                      <Badge variant="outline" className="ml-1 capitalize">
+                        {contentIntegrity.rewrite_mode?.replace(/_/g, ' ') || 'N/A'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Threshold: </span>
+                      <span className="font-medium">85%</span>
+                    </div>
+                  </div>
+
+                  {contentIntegrity.worst_chunk_pair && (
+                    <Collapsible open={worstChunkOpen} onOpenChange={setWorstChunkOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+                          <ChevronDown className={`h-4 w-4 transition-transform ${worstChunkOpen ? 'rotate-180' : ''}`} />
+                          {worstChunkOpen ? 'Hide' : 'Show'} Highest Similarity Pair
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 space-y-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-xs text-muted-foreground block mb-1">Source Chunk</span>
+                            <pre className="text-xs bg-muted p-2 rounded text-foreground whitespace-pre-wrap">
+                              {contentIntegrity.worst_chunk_pair.source_chunk}
+                            </pre>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground block mb-1">Generated Chunk</span>
+                            <pre className="text-xs bg-muted p-2 rounded text-foreground whitespace-pre-wrap">
+                              {contentIntegrity.worst_chunk_pair.generated_chunk}
+                            </pre>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  {contentIntegrity.status === 'flagged' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={handleGenerateSEO}
+                      disabled={isSeoLoading}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Regenerate with Different Mode
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Split View Results */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -348,6 +578,11 @@ export default function ScrapeTestPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
                       Rewritten Profile Content
+                      {seoContent.rewrite_mode && (
+                        <Badge variant="outline" className="ml-2 capitalize text-xs">
+                          {seoContent.rewrite_mode.replace(/_/g, ' ')}
+                        </Badge>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -419,23 +654,99 @@ export default function ScrapeTestPage() {
                     </Card>
                   )}
 
-                  {/* Authority Signals */}
+                  {/* Authority Signals with Confidence */}
                   {seoContent.authority_signals && seoContent.authority_signals.length > 0 && (
                     <Card className="mb-4">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <Shield className="h-4 w-4" />
-                          Authority Signals
+                          Authority Signals (Confidence-Weighted)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {seoContent.authority_signals.map((signal, index) => (
+                          <div key={index} className="flex items-start gap-3 p-2 bg-muted/30 rounded-md">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {signal.type.replace(/_/g, ' ')}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {signal.source.replace(/_/g, ' ')}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-foreground">{signal.statement}</p>
+                              {signal.value !== undefined && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Value: {signal.value} {signal.unit || ''}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right min-w-[80px]">
+                              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs text-white ${getConfidenceColor(signal.confidence)}`}>
+                                {(signal.confidence * 100).toFixed(0)}%
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {getConfidenceLabel(signal.confidence)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Comparative Positioning */}
+                  {(comparativePositioning || isComparativeLoading) && (
+                    <Card className="mb-4">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4" />
+                          Comparative Positioning
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="flex flex-wrap gap-2">
-                          {seoContent.authority_signals.map((signal, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {signal}
-                            </Badge>
-                          ))}
-                        </div>
+                        {isComparativeLoading ? (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Computing peer comparisons...
+                          </div>
+                        ) : comparativePositioning && (
+                          <div className="space-y-3">
+                            {comparativePositioning.map((position, index) => (
+                              <div key={index} className="flex items-center gap-3 p-2 bg-muted/30 rounded-md">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                      {position.scope}
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {position.metric}
+                                    </Badge>
+                                    {!position.threshold_met && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        Low Sample
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-foreground">{position.statement}</p>
+                                </div>
+                                <div className="text-right min-w-[60px]">
+                                  {position.threshold_met && position.percentile !== undefined ? (
+                                    <div className="flex items-center gap-1">
+                                      <TrendingUp className="h-4 w-4 text-green-500" />
+                                      <span className="text-sm font-medium">{position.percentile}%</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      {position.peer_count} peers
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}
