@@ -49,10 +49,20 @@ jobs:
           start = progress['last_index']
           batch_size = int(os.environ.get('BATCH_SIZE', 5))
 
-          # Wrap around if we've completed all cities
+          # Stop if we've completed all cities (don't wrap)
           if start >= total:
-              start = 0
-              print("Completed full cycle, starting over!")
+              print("All cities completed! Scraping finished.")
+              # Create completion marker
+              with open('scraper/COMPLETED.md', 'w') as f:
+                  f.write(f"# Scraping Completed\n\nAll {total} cities have been scraped.\n")
+              # Set flag to skip scraping
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"completed=true\n")
+                  f.write(f"start={start}\n")
+                  f.write(f"end={total}\n")
+                  f.write(f"total={total}\n")
+                  f.write(f"count=0\n")
+              exit(0)
 
           end = min(start + batch_size, total)
           batch = cities[start:end]
@@ -67,6 +77,7 @@ jobs:
 
           # Set outputs
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"completed=false\n")
               f.write(f"start={start}\n")
               f.write(f"end={end}\n")
               f.write(f"total={total}\n")
@@ -74,6 +85,7 @@ jobs:
           EOF
 
       - name: Run Google Maps Scraper
+        if: steps.batch.outputs.completed != 'true'
         run: |
           docker run --rm \
             -v ${{ github.workspace }}/scraper:/app \
@@ -85,6 +97,7 @@ jobs:
             -c 2
 
       - name: Append results and update progress
+        if: steps.batch.outputs.completed != 'true'
         run: |
           python3 << 'EOF'
           import json
@@ -128,8 +141,9 @@ jobs:
           # Update progress
           batch_size = int(os.environ.get('BATCH_SIZE', 5))
           new_index = progress['last_index'] + batch_size
-          if new_index >= len(cities):
-              new_index = 0  # Reset for next cycle
+          # Don't reset - stop when complete
+          if new_index > len(cities):
+              new_index = len(cities)  # Cap at total
 
           progress['last_index'] = new_index
           progress['total_cities'] = len(cities)
@@ -142,7 +156,7 @@ jobs:
           with open('scraper/progress.json', 'w') as f:
               json.dump(progress, f, indent=2)
 
-          print(f"Updated progress: next index = {new_index}")
+          print(f"Updated progress: next index = {new_index} of {len(cities)}")
           EOF
 
       - name: Clean up temp files
@@ -153,6 +167,10 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add scraper/all_results.csv scraper/progress.json
-          git diff --staged --quiet || git commit -m "Scrape results: cities ${{ steps.batch.outputs.start }}-${{ steps.batch.outputs.end }} of ${{ steps.batch.outputs.total }}"
+          git add scraper/all_results.csv scraper/progress.json scraper/COMPLETED.md
+          if [ "${{ steps.batch.outputs.completed }}" == "true" ]; then
+            git diff --staged --quiet || git commit -m "Scraping completed: all ${{ steps.batch.outputs.total }} cities processed"
+          else
+            git diff --staged --quiet || git commit -m "Scrape results: cities ${{ steps.batch.outputs.start }}-${{ steps.batch.outputs.end }} of ${{ steps.batch.outputs.total }}"
+          fi
           git push
