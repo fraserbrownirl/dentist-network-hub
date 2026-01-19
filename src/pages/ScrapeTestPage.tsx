@@ -6,21 +6,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { 
   Loader2, Globe, Sparkles, ArrowRight, Quote, Shield, Code, 
-  ChevronDown, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2,
+  ChevronDown, Copy, Check, AlertTriangle, CheckCircle2,
   TrendingUp, BarChart3
 } from 'lucide-react';
 import type { 
   AuthoritySignal, 
   ComparativePosition, 
-  ContentIntegrity, 
-  RewriteMode,
-  SEOContent as SEOContentType
+  ContentIntegrity
 } from '@/lib/geo-types';
-import { REWRITE_MODE_DESCRIPTIONS } from '@/lib/geo-types';
 
 interface ScrapedData {
   markdown?: string;
@@ -44,7 +39,6 @@ interface SEOContent {
   quotable_facts?: string[];
   authority_signals?: AuthoritySignal[];
   schema_json_ld?: object;
-  rewrite_mode?: string;
 }
 
 function assertEnv(value: string | undefined, name: string): string {
@@ -109,7 +103,6 @@ export default function ScrapeTestPage() {
   const [seoContent, setSeoContent] = useState<SEOContent | null>(null);
   const [contentIntegrity, setContentIntegrity] = useState<ContentIntegrity | null>(null);
   const [comparativePositioning, setComparativePositioning] = useState<ComparativePosition[] | null>(null);
-  const [rewriteMode, setRewriteMode] = useState<RewriteMode>('patient_experience');
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [copiedFact, setCopiedFact] = useState<number | null>(null);
   const [copiedSchema, setCopiedSchema] = useState(false);
@@ -177,7 +170,6 @@ export default function ScrapeTestPage() {
         address: '209 E 56th St, New York, NY 10022',
         rating: 4.3,
         reviewsCount: 150,
-        rewriteMode: rewriteMode,
       });
 
       if (result?.success === false) {
@@ -185,7 +177,7 @@ export default function ScrapeTestPage() {
       }
 
       setSeoContent(result.data);
-      toast({ title: 'Success', description: `SEO content generated with ${rewriteMode} mode!` });
+      toast({ title: 'Success', description: 'SEO content generated!' });
 
       // Automatically run similarity check
       handleSimilarityCheck(result.data.profile_content);
@@ -215,7 +207,6 @@ export default function ScrapeTestPage() {
       const result = await invokeBackendFunction<any>('compute-similarity', {
         sourceContent: scrapedData.markdown,
         generatedContent: content,
-        rewriteMode: rewriteMode,
       });
 
       if (result?.success === false) {
@@ -317,27 +308,6 @@ export default function ScrapeTestPage() {
               </Button>
             </div>
 
-            {/* Rewrite Mode Selector */}
-            <div className="pt-4 border-t border-border">
-              <label className="text-sm font-medium text-foreground mb-3 block">
-                Rewrite Mode (Narrative Frame)
-              </label>
-              <RadioGroup 
-                value={rewriteMode} 
-                onValueChange={(v) => setRewriteMode(v as RewriteMode)}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
-              >
-                {(Object.entries(REWRITE_MODE_DESCRIPTIONS) as [RewriteMode, string][]).map(([mode, description]) => (
-                  <div key={mode} className="flex items-start space-x-2">
-                    <RadioGroupItem value={mode} id={mode} className="mt-1" />
-                    <Label htmlFor={mode} className="text-sm cursor-pointer">
-                      <span className="font-medium capitalize">{mode.replace(/_/g, ' ')}</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
           </CardContent>
         </Card>
 
@@ -384,17 +354,9 @@ export default function ScrapeTestPage() {
                     </Badge>
                   </div>
                   
-                  <div className="flex gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Rewrite Mode: </span>
-                      <Badge variant="outline" className="ml-1 capitalize">
-                        {contentIntegrity.rewrite_mode?.replace(/_/g, ' ') || 'N/A'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Threshold: </span>
-                      <span className="font-medium">85%</span>
-                    </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Threshold: </span>
+                    <span className="font-medium">85%</span>
                   </div>
 
                   {contentIntegrity.worst_chunk_pair && (
@@ -424,18 +386,6 @@ export default function ScrapeTestPage() {
                     </Collapsible>
                   )}
 
-                  {contentIntegrity.status === 'flagged' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2"
-                      onClick={handleGenerateSEO}
-                      disabled={isSeoLoading}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Regenerate with Different Mode
-                    </Button>
-                  )}
                 </div>
               )}
             </CardContent>
@@ -578,11 +528,6 @@ export default function ScrapeTestPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-muted-foreground">
                       Rewritten Profile Content
-                      {seoContent.rewrite_mode && (
-                        <Badge variant="outline" className="ml-2 capitalize text-xs">
-                          {seoContent.rewrite_mode.replace(/_/g, ' ')}
-                        </Badge>
-                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

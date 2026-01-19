@@ -61,7 +61,6 @@ export interface ContentIntegrity {
   max_similarity: number;
   worst_chunk_pair?: WorstChunkPair;
   status: ContentIntegrityStatus;
-  rewrite_mode: RewriteMode;
 }
 
 export interface FAQ {
@@ -84,7 +83,6 @@ export interface GEOGenerationResult {
   authority_signals: AuthoritySignal[];
   content_integrity?: ContentIntegrity;
   comparative_positioning?: ComparativePosition[];
-  rewrite_mode: RewriteMode;
 }
 
 // Confidence heuristics
@@ -116,11 +114,3 @@ export const PEER_THRESHOLDS: Record<ComparativeScope, number> = {
 
 // Similarity threshold for content integrity
 export const SIMILARITY_THRESHOLD = 0.85;
-
-// Rewrite mode descriptions
-export const REWRITE_MODE_DESCRIPTIONS: Record<RewriteMode, string> = {
-  community_outcomes: 'Focus on patient success stories and community impact',
-  patient_experience: 'Emphasize comfort, communication, and convenience',
-  clinical_scope: 'Highlight technical capabilities, equipment, and procedures',
-  local_context: 'Neighborhood integration, accessibility, and local partnerships'
-};

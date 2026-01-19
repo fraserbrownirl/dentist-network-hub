@@ -16,8 +16,7 @@ Deno.serve(async (req) => {
       businessName, 
       address, 
       rating, 
-      reviewsCount,
-      rewriteMode = 'patient_experience' 
+      reviewsCount
     } = await req.json();
 
     if (!markdown) {
@@ -36,38 +35,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Rewrite mode narrative frames
-    const rewriteModeInstructions: Record<string, string> = {
-      community_outcomes: `NARRATIVE FRAME: Focus on patient success stories and community impact.
-- Lead with outcomes and transformations
-- Emphasize community involvement and local partnerships
-- Highlight patient testimonials and case studies
-- Frame services in terms of life improvements`,
-
-      patient_experience: `NARRATIVE FRAME: Emphasize comfort, communication, and convenience.
-- Lead with the patient journey and experience
-- Highlight comfort amenities and anxiety-reduction techniques
-- Focus on staff warmth and communication style
-- Emphasize scheduling flexibility and convenience`,
-
-      clinical_scope: `NARRATIVE FRAME: Highlight technical capabilities and clinical excellence.
-- Lead with advanced technology and equipment
-- Detail the range and depth of services offered
-- Emphasize clinical credentials and training
-- Focus on precision, accuracy, and outcomes`,
-
-      local_context: `NARRATIVE FRAME: Neighborhood integration and local accessibility.
-- Lead with location benefits and accessibility
-- Emphasize local community roots and history
-- Highlight neighborhood-specific services
-- Focus on convenient access and local partnerships`
-    };
-
-    const narrativeInstruction = rewriteModeInstructions[rewriteMode] || rewriteModeInstructions.patient_experience;
 
     const systemPrompt = `You are an expert SEO content writer specializing in local business profiles and LLM search optimization (Generative Engine Optimization). Your task is to create COMPLETELY ORIGINAL content optimized for both traditional search engines AND AI assistants like ChatGPT, Perplexity, and Google AI Overviews.
-
-${narrativeInstruction}
 
 CRITICAL RULES:
 1. DO NOT copy any sentences directly from the source
@@ -109,18 +78,16 @@ ${businessName ? `BUSINESS NAME: ${businessName}` : ''}
 ${address ? `ADDRESS: ${address}` : ''}
 ${rating ? `RATING: ${rating}${reviewsCount ? ` (${reviewsCount} reviews)` : ''}` : ''}
 
-REWRITE MODE: ${rewriteMode}
-
 Generate the following:
 1. SEO Title: Compelling title under 60 characters
 2. Meta Description: Under 155 characters
-3. Profile Content: 500-800 words of unique practice description with H2 headers (following the ${rewriteMode} narrative frame)
+3. Profile Content: 500-800 words of unique practice description with H2 headers. Naturally incorporate patient experience, clinical capabilities, and local context based on what's in the source material.
 4. FAQ: 3-5 Q&A pairs about services offered
 5. Quotable Facts: 3-5 citation-ready single-sentence facts with statistics
 6. Authority Signals: Structured credibility markers with confidence scores
 7. Schema JSON-LD: Valid LocalBusiness + Dentist + FAQPage structured data`;
 
-    console.log(`Calling Lovable AI for SEO content generation (mode: ${rewriteMode})...`);
+    console.log('Calling Lovable AI for SEO content generation...');
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -249,10 +216,7 @@ Generate the following:
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data: {
-          ...seoContent,
-          rewrite_mode: rewriteMode
-        }
+        data: seoContent
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
