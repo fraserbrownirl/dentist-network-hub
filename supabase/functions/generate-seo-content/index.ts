@@ -11,7 +11,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { markdown, businessName, address, rating, reviewsCount } = await req.json();
+    const { 
+      markdown, 
+      businessName, 
+      address, 
+      rating, 
+      reviewsCount,
+      rewriteMode = 'patient_experience' 
+    } = await req.json();
 
     if (!markdown) {
       return new Response(
@@ -29,7 +36,38 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Rewrite mode narrative frames
+    const rewriteModeInstructions: Record<string, string> = {
+      community_outcomes: `NARRATIVE FRAME: Focus on patient success stories and community impact.
+- Lead with outcomes and transformations
+- Emphasize community involvement and local partnerships
+- Highlight patient testimonials and case studies
+- Frame services in terms of life improvements`,
+
+      patient_experience: `NARRATIVE FRAME: Emphasize comfort, communication, and convenience.
+- Lead with the patient journey and experience
+- Highlight comfort amenities and anxiety-reduction techniques
+- Focus on staff warmth and communication style
+- Emphasize scheduling flexibility and convenience`,
+
+      clinical_scope: `NARRATIVE FRAME: Highlight technical capabilities and clinical excellence.
+- Lead with advanced technology and equipment
+- Detail the range and depth of services offered
+- Emphasize clinical credentials and training
+- Focus on precision, accuracy, and outcomes`,
+
+      local_context: `NARRATIVE FRAME: Neighborhood integration and local accessibility.
+- Lead with location benefits and accessibility
+- Emphasize local community roots and history
+- Highlight neighborhood-specific services
+- Focus on convenient access and local partnerships`
+    };
+
+    const narrativeInstruction = rewriteModeInstructions[rewriteMode] || rewriteModeInstructions.patient_experience;
+
     const systemPrompt = `You are an expert SEO content writer specializing in local business profiles and LLM search optimization (Generative Engine Optimization). Your task is to create COMPLETELY ORIGINAL content optimized for both traditional search engines AND AI assistants like ChatGPT, Perplexity, and Google AI Overviews.
+
+${narrativeInstruction}
 
 CRITICAL RULES:
 1. DO NOT copy any sentences directly from the source
@@ -40,19 +78,25 @@ CRITICAL RULES:
 6. Create an FAQ section based on services offered
 
 LLM OPTIMIZATION REQUIREMENTS:
+
 1. QUOTABLE FACTS: Generate 3-5 single-sentence statements that can be directly quoted by AI assistants. Each must include a specific statistic or verifiable fact. Format: "[Business] [verb] [specific claim]."
    Good: "209 NYC Dental maintains a 4.3-star rating from 150+ patient reviews."
    Bad: "This is a great dental practice." (too vague)
 
-2. AUTHORITY SIGNALS: Extract or infer credibility markers:
-   - Professional certifications mentioned
-   - Association memberships  
-   - Years in practice
-   - Number of patients served
-   - Awards or recognitions
-   - Unique specializations
+2. AUTHORITY SIGNALS WITH CONFIDENCE: Extract or infer credibility markers with explicit confidence scoring.
+   Each signal must include:
+   - type: One of [longevity, review_rating, review_velocity, verification_status, certification, membership, specialization]
+   - statement: Human-readable assertion
+   - value: Numeric value if applicable
+   - unit: Unit of measurement if applicable (years, reviews, etc.)
+   - source: One of [google_reviews, google_business, website_declared, inferred]
+   - confidence: Score from 0.0 to 1.0 based on these heuristics:
+     * Years active: min(1.0, review_count / 50) capped at 0.9-1.0
+     * Review data from Google: 0.85-0.95
+     * Website-declared certifications: 0.6-0.8 (unless externally verifiable)
+     * Inferred from context: 0.3-0.5
 
-3. SCHEMA.ORG DATA: Generate valid JSON-LD structured data for LocalBusiness + Dentist type.
+3. SCHEMA.ORG DATA: Generate valid JSON-LD structured data for LocalBusiness + Dentist type with FAQPage.
 
 Generate unique, compelling content that would rank well in search engines, be cited by AI assistants, and provide genuine value to readers.`;
 
@@ -65,16 +109,18 @@ ${businessName ? `BUSINESS NAME: ${businessName}` : ''}
 ${address ? `ADDRESS: ${address}` : ''}
 ${rating ? `RATING: ${rating}${reviewsCount ? ` (${reviewsCount} reviews)` : ''}` : ''}
 
+REWRITE MODE: ${rewriteMode}
+
 Generate the following:
 1. SEO Title: Compelling title under 60 characters
 2. Meta Description: Under 155 characters
-3. Profile Content: 500-800 words of unique practice description with H2 headers
+3. Profile Content: 500-800 words of unique practice description with H2 headers (following the ${rewriteMode} narrative frame)
 4. FAQ: 3-5 Q&A pairs about services offered
 5. Quotable Facts: 3-5 citation-ready single-sentence facts with statistics
-6. Authority Signals: List of credibility markers (certifications, years, specializations)
-7. Schema JSON-LD: Valid LocalBusiness + Dentist structured data`;
+6. Authority Signals: Structured credibility markers with confidence scores
+7. Schema JSON-LD: Valid LocalBusiness + Dentist + FAQPage structured data`;
 
-    console.log('Calling Lovable AI for SEO content generation...');
+    console.log(`Calling Lovable AI for SEO content generation (mode: ${rewriteMode})...`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -127,21 +173,33 @@ Generate the following:
                 },
                 authority_signals: {
                   type: 'array', 
-                  description: 'Credibility markers: certifications, memberships, years of experience, specializations',
-                  items: { type: 'string' }
+                  description: 'Confidence-weighted credibility markers with explicit provenance',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      type: { 
+                        type: 'string',
+                        enum: ['longevity', 'review_rating', 'review_velocity', 'verification_status', 'certification', 'membership', 'specialization']
+                      },
+                      statement: { type: 'string' },
+                      value: { type: 'number' },
+                      unit: { type: 'string' },
+                      source: {
+                        type: 'string',
+                        enum: ['google_reviews', 'google_business', 'website_declared', 'inferred']
+                      },
+                      confidence: { 
+                        type: 'number',
+                        minimum: 0,
+                        maximum: 1
+                      }
+                    },
+                    required: ['type', 'statement', 'source', 'confidence']
+                  }
                 },
                 schema_json_ld: {
                   type: 'object',
-                  description: 'Schema.org LocalBusiness + Dentist structured data for search engines and LLMs',
-                  properties: {
-                    '@context': { type: 'string' },
-                    '@type': { type: 'array', items: { type: 'string' } },
-                    name: { type: 'string' },
-                    description: { type: 'string' },
-                    address: { type: 'object' },
-                    aggregateRating: { type: 'object' },
-                    hasOfferCatalog: { type: 'object' }
-                  }
+                  description: 'Schema.org LocalBusiness + Dentist + FAQPage structured data for search engines and LLMs'
                 }
               },
               required: ['seo_title', 'seo_description', 'profile_content', 'faq', 'quotable_facts', 'authority_signals', 'schema_json_ld']
@@ -189,7 +247,13 @@ Generate the following:
     const seoContent = JSON.parse(toolCall.function.arguments);
 
     return new Response(
-      JSON.stringify({ success: true, data: seoContent }),
+      JSON.stringify({ 
+        success: true, 
+        data: {
+          ...seoContent,
+          rewrite_mode: rewriteMode
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

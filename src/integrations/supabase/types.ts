@@ -52,6 +52,50 @@ export type Database = {
           },
         ]
       }
+      authority_signals: {
+        Row: {
+          computed_at: string
+          confidence: number
+          id: string
+          lead_id: string
+          source: string
+          statement: string
+          type: string
+          unit: string | null
+          value: number | null
+        }
+        Insert: {
+          computed_at?: string
+          confidence: number
+          id?: string
+          lead_id: string
+          source: string
+          statement: string
+          type: string
+          unit?: string | null
+          value?: number | null
+        }
+        Update: {
+          computed_at?: string
+          confidence?: number
+          id?: string
+          lead_id?: string
+          source?: string
+          statement?: string
+          type?: string
+          unit?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authority_signals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "business_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_leads: {
         Row: {
           address: string | null
@@ -153,6 +197,94 @@ export type Database = {
         }
         Relationships: []
       }
+      comparative_positioning: {
+        Row: {
+          computed_at: string
+          id: string
+          lead_id: string
+          metric: string
+          peer_count: number
+          percentile: number | null
+          scope: string
+          statement: string
+          threshold_met: boolean
+        }
+        Insert: {
+          computed_at?: string
+          id?: string
+          lead_id: string
+          metric: string
+          peer_count: number
+          percentile?: number | null
+          scope: string
+          statement: string
+          threshold_met?: boolean
+        }
+        Update: {
+          computed_at?: string
+          id?: string
+          lead_id?: string
+          metric?: string
+          peer_count?: number
+          percentile?: number | null
+          scope?: string
+          statement?: string
+          threshold_met?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparative_positioning_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "business_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_integrity: {
+        Row: {
+          checked_at: string
+          generation_id: string | null
+          id: string
+          lead_id: string
+          max_similarity: number
+          rewrite_mode: string
+          source_hash: string
+          status: string
+          worst_chunk_pair: Json | null
+        }
+        Insert: {
+          checked_at?: string
+          generation_id?: string | null
+          id?: string
+          lead_id: string
+          max_similarity: number
+          rewrite_mode: string
+          source_hash: string
+          status?: string
+          worst_chunk_pair?: Json | null
+        }
+        Update: {
+          checked_at?: string
+          generation_id?: string | null
+          id?: string
+          lead_id?: string
+          max_similarity?: number
+          rewrite_mode?: string
+          source_hash?: string
+          status?: string
+          worst_chunk_pair?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_integrity_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "business_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dentist_scrapes: {
         Row: {
           batch_number: number | null
@@ -244,6 +376,56 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_content: {
+        Row: {
+          faq: Json
+          generated_at: string
+          id: string
+          is_active: boolean
+          lead_id: string
+          profile_content: string
+          quotable_facts: Json
+          rewrite_mode: string
+          schema_json_ld: Json
+          seo_description: string
+          seo_title: string
+        }
+        Insert: {
+          faq: Json
+          generated_at?: string
+          id?: string
+          is_active?: boolean
+          lead_id: string
+          profile_content: string
+          quotable_facts: Json
+          rewrite_mode: string
+          schema_json_ld: Json
+          seo_description: string
+          seo_title: string
+        }
+        Update: {
+          faq?: Json
+          generated_at?: string
+          id?: string
+          is_active?: boolean
+          lead_id?: string
+          profile_content?: string
+          quotable_facts?: Json
+          rewrite_mode?: string
+          schema_json_ld?: Json
+          seo_description?: string
+          seo_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_content_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "business_leads"
             referencedColumns: ["id"]
           },
         ]
