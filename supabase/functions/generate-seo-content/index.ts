@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert SEO content writer specializing in local business profiles. Your task is to create COMPLETELY ORIGINAL content based on the source material provided. 
+    const systemPrompt = `You are an expert SEO content writer specializing in local business profiles and LLM search optimization (Generative Engine Optimization). Your task is to create COMPLETELY ORIGINAL content optimized for both traditional search engines AND AI assistants like ChatGPT, Perplexity, and Google AI Overviews.
 
 CRITICAL RULES:
 1. DO NOT copy any sentences directly from the source
@@ -39,9 +39,24 @@ CRITICAL RULES:
 5. Structure content with proper headers
 6. Create an FAQ section based on services offered
 
-Generate unique, compelling content that would rank well in search engines while providing genuine value to readers.`;
+LLM OPTIMIZATION REQUIREMENTS:
+1. QUOTABLE FACTS: Generate 3-5 single-sentence statements that can be directly quoted by AI assistants. Each must include a specific statistic or verifiable fact. Format: "[Business] [verb] [specific claim]."
+   Good: "209 NYC Dental maintains a 4.3-star rating from 150+ patient reviews."
+   Bad: "This is a great dental practice." (too vague)
 
-    const userPrompt = `Create SEO-optimized content for a dental practice using this source material:
+2. AUTHORITY SIGNALS: Extract or infer credibility markers:
+   - Professional certifications mentioned
+   - Association memberships  
+   - Years in practice
+   - Number of patients served
+   - Awards or recognitions
+   - Unique specializations
+
+3. SCHEMA.ORG DATA: Generate valid JSON-LD structured data for LocalBusiness + Dentist type.
+
+Generate unique, compelling content that would rank well in search engines, be cited by AI assistants, and provide genuine value to readers.`;
+
+    const userPrompt = `Create SEO and LLM-optimized content for a dental practice using this source material:
 
 SOURCE MATERIAL:
 ${markdown}
@@ -54,7 +69,10 @@ Generate the following:
 1. SEO Title: Compelling title under 60 characters
 2. Meta Description: Under 155 characters
 3. Profile Content: 500-800 words of unique practice description with H2 headers
-4. FAQ: 3-5 Q&A pairs about services offered`;
+4. FAQ: 3-5 Q&A pairs about services offered
+5. Quotable Facts: 3-5 citation-ready single-sentence facts with statistics
+6. Authority Signals: List of credibility markers (certifications, years, specializations)
+7. Schema JSON-LD: Valid LocalBusiness + Dentist structured data`;
 
     console.log('Calling Lovable AI for SEO content generation...');
 
@@ -74,7 +92,7 @@ Generate the following:
           type: 'function',
           function: {
             name: 'generate_seo_content',
-            description: 'Generate SEO-optimized content for a business profile',
+            description: 'Generate SEO and LLM-optimized content for a business profile',
             parameters: {
               type: 'object',
               properties: {
@@ -101,9 +119,32 @@ Generate the following:
                     },
                     required: ['question', 'answer']
                   }
+                },
+                quotable_facts: {
+                  type: 'array',
+                  description: 'Citation-ready single-sentence facts with statistics that LLMs can quote directly',
+                  items: { type: 'string' }
+                },
+                authority_signals: {
+                  type: 'array', 
+                  description: 'Credibility markers: certifications, memberships, years of experience, specializations',
+                  items: { type: 'string' }
+                },
+                schema_json_ld: {
+                  type: 'object',
+                  description: 'Schema.org LocalBusiness + Dentist structured data for search engines and LLMs',
+                  properties: {
+                    '@context': { type: 'string' },
+                    '@type': { type: 'array', items: { type: 'string' } },
+                    name: { type: 'string' },
+                    description: { type: 'string' },
+                    address: { type: 'object' },
+                    aggregateRating: { type: 'object' },
+                    hasOfferCatalog: { type: 'object' }
+                  }
                 }
               },
-              required: ['seo_title', 'seo_description', 'profile_content', 'faq']
+              required: ['seo_title', 'seo_description', 'profile_content', 'faq', 'quotable_facts', 'authority_signals', 'schema_json_ld']
             }
           }
         }],

@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Globe, Sparkles, ArrowRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Loader2, Globe, Sparkles, ArrowRight, Quote, Shield, Code, ChevronDown, Copy, Check } from 'lucide-react';
 
 interface ScrapedData {
   markdown?: string;
@@ -24,6 +26,9 @@ interface SEOContent {
   seo_description: string;
   profile_content: string;
   faq: Array<{ question: string; answer: string }>;
+  quotable_facts?: string[];
+  authority_signals?: string[];
+  schema_json_ld?: object;
 }
 
 function assertEnv(value: string | undefined, name: string): string {
@@ -69,6 +74,20 @@ export default function ScrapeTestPage() {
   const [isSeoLoading, setIsSeoLoading] = useState(false);
   const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
   const [seoContent, setSeoContent] = useState<SEOContent | null>(null);
+  const [schemaOpen, setSchemaOpen] = useState(false);
+  const [copiedFact, setCopiedFact] = useState<number | null>(null);
+  const [copiedSchema, setCopiedSchema] = useState(false);
+
+  const copyToClipboard = async (text: string, factIndex?: number) => {
+    await navigator.clipboard.writeText(text);
+    if (factIndex !== undefined) {
+      setCopiedFact(factIndex);
+      setTimeout(() => setCopiedFact(null), 2000);
+    } else {
+      setCopiedSchema(true);
+      setTimeout(() => setCopiedSchema(false), 2000);
+    }
+  };
 
   const handleScrape = async () => {
     if (!url) {
@@ -356,6 +375,113 @@ export default function ScrapeTestPage() {
                     ))}
                   </CardContent>
                 </Card>
+
+                {/* LLM Optimization Section */}
+                <div className="pt-4 border-t border-border">
+                  <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    LLM Search Optimization (GEO)
+                  </h3>
+
+                  {/* Quotable Facts */}
+                  {seoContent.quotable_facts && seoContent.quotable_facts.length > 0 && (
+                    <Card className="mb-4">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <Quote className="h-4 w-4" />
+                          Quotable Facts ({seoContent.quotable_facts.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {seoContent.quotable_facts.map((fact, index) => (
+                          <div 
+                            key={index} 
+                            className="relative bg-muted/50 border-l-4 border-primary p-3 rounded-r-md group"
+                          >
+                            <blockquote className="text-sm text-foreground italic pr-8">
+                              "{fact}"
+                            </blockquote>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => copyToClipboard(fact, index)}
+                            >
+                              {copiedFact === index ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Authority Signals */}
+                  {seoContent.authority_signals && seoContent.authority_signals.length > 0 && (
+                    <Card className="mb-4">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Authority Signals
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                          {seoContent.authority_signals.map((signal, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {signal}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Schema JSON-LD Preview */}
+                  {seoContent.schema_json_ld && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <Code className="h-4 w-4" />
+                          Schema.org JSON-LD
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Collapsible open={schemaOpen} onOpenChange={setSchemaOpen}>
+                          <div className="flex items-center justify-between">
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm" className="gap-2">
+                                <ChevronDown className={`h-4 w-4 transition-transform ${schemaOpen ? 'rotate-180' : ''}`} />
+                                {schemaOpen ? 'Hide' : 'Show'} Schema
+                              </Button>
+                            </CollapsibleTrigger>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              onClick={() => copyToClipboard(JSON.stringify(seoContent.schema_json_ld, null, 2))}
+                            >
+                              {copiedSchema ? (
+                                <Check className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                              Copy Schema
+                            </Button>
+                          </div>
+                          <CollapsibleContent>
+                            <pre className="mt-3 text-xs bg-muted p-4 rounded-md overflow-auto max-h-[300px] whitespace-pre-wrap">
+                              {JSON.stringify(seoContent.schema_json_ld, null, 2)}
+                            </pre>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </>
             ) : (
               <Card>
