@@ -465,17 +465,30 @@ cities_data = {
 def generate_cities_file():
     """Generate cities.txt file with all cities formatted for scraper"""
     output_lines = []
+    total_unique = 0
+    total_duplicates = 0
     
     for country, cities in cities_data.items():
-        output_lines.append(f"# {country}")
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_cities = []
         for city in cities:
+            if city not in seen:
+                seen.add(city)
+                unique_cities.append(city)
+            else:
+                total_duplicates += 1
+        
+        output_lines.append(f"# {country}")
+        for city in unique_cities:
             output_lines.append(f"dentists {city}, {country}")
         output_lines.append("")
+        total_unique += len(unique_cities)
     
-    return "\n".join(output_lines)
+    return "\n".join(output_lines), total_unique, total_duplicates
 
 if __name__ == "__main__":
-    content = generate_cities_file()
+    content, total, duplicates = generate_cities_file()
     with open("cities.txt", "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"Generated cities.txt with {sum(len(cities) for cities in cities_data.values())} cities")
+    print(f"Generated cities.txt with {total} unique cities (removed {duplicates} duplicates)")

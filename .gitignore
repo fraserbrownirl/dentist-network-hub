@@ -26,3 +26,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Scraper results (can get very large)
+# Uncomment if all_results.csv exceeds GitHub's 100MB limit
+# scraper/all_results.csv

@@ -50,7 +50,6 @@ dentists Oakland, USA
 dentists Miami Beach, USA
 dentists Tulsa, USA
 dentists Arlington, USA
-dentists Tampa, USA
 dentists Newark, USA
 dentists Buffalo, USA
 dentists Corpus Christi, USA
@@ -64,16 +63,12 @@ dentists Cincinnati, USA
 dentists St. Paul, USA
 dentists Toledo, USA
 dentists Greensboro, USA
-dentists Newark, USA
 dentists Plano, USA
 dentists Henderson, USA
 dentists Lincoln, USA
-dentists Buffalo, USA
 dentists Jersey City, USA
 dentists Chula Vista, USA
 dentists Fort Wayne, USA
-dentists Orlando, USA
-dentists St. Petersburg, USA
 dentists Chandler, USA
 dentists Laredo, USA
 dentists Norfolk, USA
@@ -105,21 +100,17 @@ dentists Fayetteville, USA
 dentists Tacoma, USA
 dentists Oxnard, USA
 dentists Fontana, USA
-dentists Columbus, USA
 dentists Montgomery, USA
 dentists Moreno Valley, USA
 dentists Shreveport, USA
-dentists Aurora, USA
 dentists Yonkers, USA
 dentists Akron, USA
 dentists Huntington Beach, USA
 dentists Little Rock, USA
 dentists Augusta, USA
 dentists Amarillo, USA
-dentists Glendale, USA
 dentists Mobile, USA
 dentists Grand Rapids, USA
-dentists Salt Lake City, USA
 dentists Tallahassee, USA
 dentists Grand Prairie, USA
 dentists Overland Park, USA
@@ -157,7 +148,6 @@ dentists Palmdale, USA
 dentists Hayward, USA
 dentists Salinas, USA
 dentists Frisco, USA
-dentists Springfield, USA
 dentists Pasadena, USA
 dentists Macon, USA
 dentists Alexandria, USA
@@ -165,7 +155,6 @@ dentists Pomona, USA
 dentists Lakewood, USA
 dentists Sunnyvale, USA
 dentists Escondido, USA
-dentists Kansas City, USA
 dentists Hollywood, USA
 dentists Clarksville, USA
 dentists Torrance, USA
@@ -179,7 +168,6 @@ dentists Mesquite, USA
 dentists Killeen, USA
 dentists Syracuse, USA
 dentists McAllen, USA
-dentists Pasadena, USA
 dentists Bellevue, USA
 dentists Fullerton, USA
 dentists Orange, USA
@@ -205,13 +193,11 @@ dentists Concord, USA
 dentists Hartford, USA
 dentists Kent, USA
 dentists Lafayette, USA
-dentists Bellevue, USA
 dentists Santa Clara, USA
 dentists Costa Mesa, USA
 dentists Miami Gardens, USA
 dentists Fairfield, USA
 dentists Clearwater, USA
-dentists Peoria, USA
 dentists Independence, USA
 dentists Westminster, USA
 dentists North Charleston, USA
@@ -231,7 +217,6 @@ dentists Evansville, USA
 dentists Downey, USA
 dentists Inglewood, USA
 dentists South Bend, USA
-dentists Richmond, USA
 dentists Antioch, USA
 dentists El Monte, USA
 dentists Round Rock, USA
@@ -244,7 +229,6 @@ dentists Lewisville, USA
 dentists Tyler, USA
 dentists Athens, USA
 dentists Roseville, USA
-dentists Thornton, USA
 dentists Abilene, USA
 dentists Avondale, USA
 dentists Vallejo, USA
@@ -259,103 +243,26 @@ dentists Palm Bay, USA
 dentists Cambridge, USA
 dentists Broken Arrow, USA
 dentists Lowell, USA
-dentists Clearwater, USA
 dentists Gainesville, USA
-dentists Westminster, USA
 dentists High Point, USA
 dentists West Jordan, USA
 dentists Murfreesboro, USA
-dentists Lakeland, USA
 dentists Pompano Beach, USA
 dentists Bremerton, USA
 dentists Arvada, USA
 dentists Sandy Springs, USA
 dentists Federal Way, USA
 dentists Albany, USA
-dentists Boulder, USA
 dentists Odessa, USA
 dentists Erie, USA
-dentists Carrollton, USA
 dentists Wilmington, USA
 dentists Racine, USA
 dentists St. Cloud, USA
-dentists Athens, USA
 dentists Thousand Oaks, USA
 dentists Coral Springs, USA
-dentists Elgin, USA
-dentists Independence, USA
-dentists Fairfield, USA
 dentists Lansing, USA
-dentists South Bend, USA
-dentists Westminster, USA
 dentists Brockton, USA
-dentists Evansville, USA
-dentists Daly City, USA
-dentists Burbank, USA
-dentists Renton, USA
-dentists Inglewood, USA
-dentists Compton, USA
 dentists South Gate, USA
-dentists Richmond, USA
-dentists Downey, USA
-dentists El Monte, USA
-dentists Antioch, USA
-dentists Round Rock, USA
-dentists Pueblo, USA
-dentists Kenosha, USA
-dentists Ann Arbor, USA
-dentists Lakeland, USA
-dentists Gresham, USA
-dentists Lewisville, USA
-dentists Tyler, USA
-dentists Athens, USA
-dentists Roseville, USA
-dentists Thornton, USA
-dentists Abilene, USA
-dentists Avondale, USA
-dentists Vallejo, USA
-dentists Victorville, USA
-dentists Norman, USA
-dentists Allentown, USA
-dentists Berkeley, USA
-dentists West Covina, USA
-dentists Billings, USA
-dentists Richardson, USA
-dentists Palm Bay, USA
-dentists Cambridge, USA
-dentists Broken Arrow, USA
-dentists Lowell, USA
-dentists Clearwater, USA
-dentists Gainesville, USA
-dentists Westminster, USA
-dentists High Point, USA
-dentists West Jordan, USA
-dentists Murfreesboro, USA
-dentists Lakeland, USA
-dentists Pompano Beach, USA
-dentists Bremerton, USA
-dentists Arvada, USA
-dentists Sandy Springs, USA
-dentists Federal Way, USA
-dentists Albany, USA
-dentists Boulder, USA
-dentists Odessa, USA
-dentists Erie, USA
-dentists Carrollton, USA
-dentists Wilmington, USA
-dentists Racine, USA
-dentists St. Cloud, USA
-dentists Athens, USA
-dentists Thousand Oaks, USA
-dentists Coral Springs, USA
-dentists Elgin, USA
-dentists Independence, USA
-dentists Fairfield, USA
-dentists Lansing, USA
-dentists South Bend, USA
-dentists Westminster, USA
-dentists Brockton, USA
-dentists Evansville, USA
 
 # Canada
 dentists Toronto, Canada
@@ -587,7 +494,6 @@ dentists Mulhouse, France
 dentists Rouen, France
 dentists Caen, France
 dentists Nancy, France
-dentists Saint-Denis, France
 dentists Argenteuil, France
 dentists Montreuil, France
 dentists Roubaix, France
@@ -750,7 +656,6 @@ dentists Roosendaal, Netherlands
 dentists Schiedam, Netherlands
 dentists Vlaardingen, Netherlands
 dentists Spijkenisse, Netherlands
-dentists Dordrecht, Netherlands
 dentists Purmerend, Netherlands
 dentists Hengelo, Netherlands
 
@@ -1197,7 +1102,6 @@ dentists Gunsan, South Korea
 dentists Iksan, South Korea
 dentists Suncheon, South Korea
 dentists Gwangyang, South Korea
-dentists Jinju, South Korea
 dentists Tongyeong, South Korea
 
 # China
