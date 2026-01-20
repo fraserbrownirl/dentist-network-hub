@@ -15,9 +15,10 @@ This captures far more dentists than a single query per city.
 1. **Runs 3x Daily**: At 2 AM, 10 AM, and 6 PM UTC
 2. **Batch Processing**: Scrapes 20 queries per run
 3. **Depth 3 Pagination**: Gets ~50-60 results per query instead of ~16
-4. **Progress Tracking**: Remembers where it left off between runs
-5. **Auto-Commit**: Results are automatically committed back to this repo
-6. **Stops on Completion**: Automatically stops when all queries are done
+4. **Syncs to Database**: POSTs results to Supabase edge function
+5. **Progress Tracking**: Remembers where it left off between runs
+6. **Auto-Commit**: Results are automatically committed back to this repo
+7. **Stops on Completion**: Automatically stops when all queries are done
 
 ## Coverage
 
@@ -42,12 +43,23 @@ This captures far more dentists than a single query per city.
 - **1,118 queries ÷ 60 per day = ~19 days** for completion
 - Automatically stops when all queries are scraped
 
+## Required GitHub Secrets
+
+Set these in **Settings > Secrets and variables > Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_URL` | Your Supabase project URL (e.g., `https://xxx.supabase.co`) |
+| `WEBHOOK_SECRET` | Secret token for authenticating the webhook |
+
+The scraper will sync each batch to the `github-sync-webhook` edge function.
+
 ## Public Repository Benefits
 
 Since this repo is public, GitHub Actions provides:
 - **Unlimited free minutes** (vs 2,000/month for private repos)
 - Currently set to 20 cities × 3 runs/day = 60 cities/day
-- Completion in ~33 days
+- Completion in ~19 days
 
 ## Manual Trigger
 
