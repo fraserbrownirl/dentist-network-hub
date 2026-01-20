@@ -1,6 +1,6 @@
 # Dentist Network Hub – Automation Pipeline Architecture
 
-This document describes the fully automated pipeline that ingests dentist leads from Google Maps, scrapes their websites via Firecrawl, and generates SEO/GEO-optimized content via Lovable AI — all stored in `dentist_scrapes`.
+This document describes the fully automated pipeline that ingests dentist leads from Google Maps, scrapes their websites via Firecrawl, and generates SEO-optimized content via Lovable AI — all stored in `dentist_scrapes`.
 
 ## High-level data flow
 
@@ -45,7 +45,7 @@ flowchart LR
 | Function | Purpose | Used by Main Pipeline |
 |----------|---------|:---------------------:|
 | `github-sync-webhook` | Ingests CSV from GitHub Actions, upserts to `dentist_scrapes`, triggers `process-lead-queue` | Yes |
-| `process-lead-queue` | Orchestrator: Stage 1 scrapes websites via Firecrawl, Stage 2 generates SEO content via Lovable AI, writes all results back to `dentist_scrapes` | Yes |
+| `process-lead-queue` | Orchestrator: Stage 1 scrapes websites via Firecrawl, Stage 2 generates SEO content via Lovable AI | Yes |
 | `scrape-website` | Standalone Firecrawl wrapper (used by `/admin/scrape-test` UI) | No |
 | `generate-seo-content` | Standalone SEO generator (used by `/admin/scrape-test` UI) | No |
 | `compute-similarity` | Content integrity check (used by `/admin/scrape-test` UI) | No |
@@ -79,8 +79,8 @@ flowchart LR
 
 1. Authenticates via `WEBHOOK_SECRET`
 2. Parses incoming CSV
-3. Upserts each lead into `dentist_scrapes` (conflict key: `website`)
-4. **Auto-triggers `process-lead-queue`** after successful inserts
+3. Upserts each lead into `dentist_scrapes` (conflict key: `place_id` if available, fallback to `website`)
+4. **Auto-triggers `process-lead-queue`** with `stage: 'scrape'` after successful inserts
 
 ### Auth model
 
@@ -96,22 +96,58 @@ flowchart LR
 The orchestrator processes leads in two stages:
 
 **Stage 1 — Website Scraping (Firecrawl)**
-- Fetches `dentist_scrapes` rows where `has_content = false`
-- Calls Firecrawl API to scrape each website
-- Stores the markdown in `text_content` column
-- Sets `has_content = true`
+
+Query conditions:
+```sql
+(scrape_status IS NULL OR scrape_status = 'pending')
+AND text_content IS NULL
+LIMIT 5
+```
+
+Processing:
+- Calls Firecrawl API for each website (2000ms delay between requests)
+- Updates record:
+  - `text_content`: scraped markdown
+  - `has_content`: true
+  - `scrape_status`: 'scraped'
+  - `scraped_at`: timestamp
+
+On failure:
+- Sets `scrape_status`: 'failed'
+- Sets `processing_error`: error message
 
 **Stage 2 — SEO Content Generation (Lovable AI)**
-- Fetches `dentist_scrapes` rows where `has_content = true` but SEO columns are empty
-- Calls Lovable AI gateway to generate SEO content
-- Stores results directly in `dentist_scrapes` columns:
-  - `seo_title`
-  - `seo_description`
-  - `profile_content`
-  - `faq` (JSONB)
-  - `quotable_facts` (JSONB)
-  - `authority_signals` (JSONB)
-  - `schema_json_ld` (JSONB)
+
+Query conditions:
+```sql
+scrape_status = 'scraped'
+AND text_content IS NOT NULL
+LIMIT 5
+```
+
+Processing:
+- Calls Lovable AI (gemini-2.5-flash) for each lead (1000ms delay between requests)
+- Updates record:
+  - `seo_title`: generated title
+  - `seo_description`: generated meta description
+  - `profile_content`: generated profile markdown
+  - `services`: JSON array of services offered
+  - `unique_features`: JSON array of differentiators
+  - `faq`: JSON array of {question, answer} pairs
+  - `scrape_status`: 'processed'
+  - `processed_at`: timestamp
+
+On failure:
+- Status remains 'scraped' (allows retry on next run)
+- Logs error but continues processing batch
+
+### Rate Limiting
+
+| Service | Delay | Constant |
+|---------|-------|----------|
+| Firecrawl | 2000ms | `FIRECRAWL_DELAY_MS` |
+| Lovable AI | 1000ms | `AI_DELAY_MS` |
+| Batch Size | 5 leads | `BATCH_SIZE` |
 
 ### Required Supabase Function Env Vars
 
@@ -153,22 +189,59 @@ This single table stores the complete lead lifecycle — from raw Google Maps da
 
 | Column | Type | Purpose |
 |--------|------|---------|
+| **Identity** |||
 | `id` | SERIAL | Primary key |
-| `website` | TEXT | Unique constraint, upsert key |
-| `city` | TEXT | Extracted from address |
-| `email` | TEXT | First email from Google Maps |
-| `batch_number` | INTEGER | Groups leads by scrape batch |
-| `scraped_at` | TIMESTAMP | When Google Maps data was ingested |
-| `has_email` | BOOLEAN | Quick filter flag |
-| `text_content` | TEXT | Website markdown from Firecrawl |
-| `has_content` | BOOLEAN | Indicates Firecrawl completed |
-| `seo_title` | TEXT | Generated SEO title |
+| `place_id` | TEXT | Google Maps unique ID (primary conflict key) |
+| `website` | TEXT | Business website (required, fallback conflict key) |
+| **Google Maps Data** |||
+| `business_name` | TEXT | Practice name |
+| `phone` | TEXT | Phone number |
+| `email` | TEXT | Email if found |
+| `rating` | NUMERIC | Google rating (1-5) |
+| `review_count` | INTEGER | Number of reviews |
+| `latitude` | NUMERIC | Coordinates |
+| `longitude` | NUMERIC | Coordinates |
+| `category` | TEXT | Business category |
+| `open_hours` | TEXT | Operating hours |
+| `google_maps_link` | TEXT | Maps URL |
+| **Location** |||
+| `city` | TEXT | Extracted from address or input_id |
+| `city_id` | INTEGER | Reference to cities table |
+| **Processing State** |||
+| `scrape_status` | TEXT | pending → scraped → processed / failed |
+| `processing_error` | TEXT | Last error message |
+| `retry_count` | INTEGER | Number of retry attempts |
+| **Raw Content** |||
+| `text_content` | TEXT | Scraped website markdown |
+| `has_content` | BOOLEAN | Whether scrape succeeded |
+| `has_email` | BOOLEAN | Whether email was found |
+| **SEO Content** |||
+| `seo_title` | TEXT | Generated page title |
 | `seo_description` | TEXT | Generated meta description |
-| `profile_content` | TEXT | Generated profile markdown |
-| `faq` | JSONB | Generated FAQ array |
-| `quotable_facts` | JSONB | LLM-quotable statements |
-| `authority_signals` | JSONB | Confidence-weighted credibility markers |
-| `schema_json_ld` | JSONB | Structured data for search engines |
+| `profile_content` | TEXT | Generated business profile |
+| `services` | JSONB | Array of services offered |
+| `unique_features` | JSONB | Array of differentiators |
+| `faq` | JSONB | Array of {question, answer} |
+| **Timestamps** |||
+| `created_at` | TIMESTAMPTZ | Record creation |
+| `scraped_at` | TIMESTAMPTZ | When Firecrawl completed |
+| `processed_at` | TIMESTAMPTZ | When SEO generation completed |
+| **Batch Tracking** |||
+| `batch_number` | INTEGER | Groups leads by import batch |
+
+### State Machine
+
+```
+┌─────────┐    Firecrawl    ┌─────────┐    Lovable AI    ┌───────────┐
+│ pending │ ──────────────► │ scraped │ ───────────────► │ processed │
+└─────────┘                 └─────────┘                  └───────────┘
+     │                           │
+     │         Error             │         (retry on next run)
+     ▼                           │
+┌─────────┐                      │
+│ failed  │ ◄────────────────────┘
+└─────────┘
+```
 
 ### Supporting Tables
 
@@ -179,7 +252,7 @@ This single table stores the complete lead lifecycle — from raw Google Maps da
 The following tables exist from earlier iterations but are **not used by the main pipeline**:
 
 - `generated_content` — linked to `business_leads`, not `dentist_scrapes`
-- `authority_signals` (table) — separate from JSONB column in `dentist_scrapes`
+- `authority_signals` (table) — separate from `dentist_scrapes`
 - `comparative_positioning` — used by standalone function only
 - `content_integrity` — used by standalone function only
 - `business_leads` — from older lead extraction workflow
@@ -194,17 +267,37 @@ After processing a batch of leads, `process-lead-queue` returns:
 {
   "success": true,
   "should_continue": true,
-  "processed": 10,
-  "remaining": 150
+  "processed": 5,
+  "remaining": { "scrape": 150, "generate": 45 }
 }
 ```
 
 However, it does **not** currently self-invoke to process the next batch. The caller (or a scheduler) would need to re-trigger the function until `should_continue: false`.
 
-**Potential solutions**:
+**Recommended solution** — Add self-invocation at end of `process-lead-queue`:
+
+```typescript
+if (shouldContinue) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
+  // Determine next stage: if no more to scrape, switch to generate
+  const nextStage = stage === 'scrape' && remainingScrape === 0 ? 'generate' : stage;
+  
+  fetch(`${supabaseUrl}/functions/v1/process-lead-queue`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ stage: nextStage, batch_size: BATCH_SIZE })
+  }).catch(err => console.error('Self-continuation failed:', err));
+}
+```
+
+**Alternative solutions**:
 - Add a pg_cron job that periodically calls `process-lead-queue`
 - Have the GitHub Action call `process-lead-queue` in a loop after CSV ingestion
-- Implement recursive self-invocation within the edge function
 
 ## 7) Manual Testing
 
@@ -212,12 +305,12 @@ However, it does **not** currently self-invoke to process the next batch. The ca
 
 1. Trigger GitHub Action manually:
    - GitHub → Actions → "Daily Dentist Scraper" → "Run workflow"
-2. Verify `dentist_scrapes` rows are created with `has_content = false`
+2. Verify `dentist_scrapes` rows are created with `scrape_status = 'pending'`
 3. Verify `process-lead-queue` is triggered and populates:
-   - `text_content` (Stage 1)
-   - SEO columns (Stage 2)
+   - `text_content`, `scraped_at` (Stage 1)
+   - SEO columns, `processed_at` (Stage 2)
 
-### Test Standalone GEO Functions
+### Test Standalone Functions
 
 1. Run the app and navigate to `/admin/scrape-test`
 2. Enter a URL and click "Scrape Website"
