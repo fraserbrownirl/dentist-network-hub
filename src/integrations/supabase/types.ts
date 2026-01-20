@@ -98,55 +98,106 @@ export type Database = {
       }
       business_leads: {
         Row: {
+          about: Json | null
           address: string | null
           category: string | null
+          cid: string | null
+          complete_address: Json | null
           created_at: string
           description: string | null
+          email: string | null
+          emails: string[] | null
           google_url: string | null
           id: string
+          images: Json | null
           job_id: string
+          latitude: number | null
+          longitude: number | null
           name: string | null
+          open_hours: Json | null
+          owner: Json | null
           phone_number: string | null
           place_id: string
+          plus_code: string | null
+          popular_times: Json | null
+          price_range: string | null
+          processed_at: string | null
           rating: number | null
           reviews_count: number | null
+          scrape_status: string | null
+          scraped_at: string | null
           services_provided: string[] | null
+          timezone: string | null
           top_reviews: Json | null
           updated_at: string
           website: string | null
         }
         Insert: {
+          about?: Json | null
           address?: string | null
           category?: string | null
+          cid?: string | null
+          complete_address?: Json | null
           created_at?: string
           description?: string | null
+          email?: string | null
+          emails?: string[] | null
           google_url?: string | null
           id?: string
+          images?: Json | null
           job_id: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string | null
+          open_hours?: Json | null
+          owner?: Json | null
           phone_number?: string | null
           place_id: string
+          plus_code?: string | null
+          popular_times?: Json | null
+          price_range?: string | null
+          processed_at?: string | null
           rating?: number | null
           reviews_count?: number | null
+          scrape_status?: string | null
+          scraped_at?: string | null
           services_provided?: string[] | null
+          timezone?: string | null
           top_reviews?: Json | null
           updated_at?: string
           website?: string | null
         }
         Update: {
+          about?: Json | null
           address?: string | null
           category?: string | null
+          cid?: string | null
+          complete_address?: Json | null
           created_at?: string
           description?: string | null
+          email?: string | null
+          emails?: string[] | null
           google_url?: string | null
           id?: string
+          images?: Json | null
           job_id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string | null
+          open_hours?: Json | null
+          owner?: Json | null
           phone_number?: string | null
           place_id?: string
+          plus_code?: string | null
+          popular_times?: Json | null
+          price_range?: string | null
+          processed_at?: string | null
           rating?: number | null
           reviews_count?: number | null
+          scrape_status?: string | null
+          scraped_at?: string | null
           services_provided?: string[] | null
+          timezone?: string | null
           top_reviews?: Json | null
           updated_at?: string
           website?: string | null
@@ -430,6 +481,51 @@ export type Database = {
           },
         ]
       }
+      import_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          failed_rows: number
+          filename: string | null
+          id: string
+          imported_rows: number
+          skipped_rows: number
+          source_url: string | null
+          status: string
+          total_rows: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          failed_rows?: number
+          filename?: string | null
+          id?: string
+          imported_rows?: number
+          skipped_rows?: number
+          source_url?: string | null
+          status?: string
+          total_rows?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          failed_rows?: number
+          filename?: string | null
+          id?: string
+          imported_rows?: number
+          skipped_rows?: number
+          source_url?: string | null
+          status?: string
+          total_rows?: number
+        }
+        Relationships: []
+      }
       lead_extraction_jobs: {
         Row: {
           bright_data_snapshot_id: string | null
@@ -602,6 +698,59 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "lead_extraction_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processing_queue: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string
+          max_attempts: number
+          metadata: Json | null
+          priority: number
+          stage: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          max_attempts?: number
+          metadata?: Json | null
+          priority?: number
+          stage: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          max_attempts?: number
+          metadata?: Json | null
+          priority?: number
+          stage?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "business_leads"
             referencedColumns: ["id"]
           },
         ]
