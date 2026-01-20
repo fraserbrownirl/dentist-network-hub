@@ -7,6 +7,48 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+// Verify authenticated user from JWT
+async function verifyAuth(req: Request): Promise<{ userId: string } | null> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data, error } = await supabase.auth.getUser(token);
+  
+  if (error || !data?.user) {
+    return null;
+  }
+
+  return { userId: data.user.id };
+}
+
+// Sanitize city name to prevent SQL pattern injection
+function sanitizeCityName(input: string): string | null {
+  // Only allow letters, spaces, hyphens, and apostrophes (common in city names)
+  const sanitized = input.trim();
+  if (!/^[a-zA-Z\s\-']+$/.test(sanitized)) {
+    return null;
+  }
+  if (sanitized.length > 100) {
+    return null;
+  }
+  // Escape SQL LIKE wildcards
+  return sanitized.replace(/[%_]/g, '\\$&');
+}
+
 // Minimum peer thresholds for valid percentile claims
 const PEER_THRESHOLDS: Record<string, number> = {
   city: 50,
@@ -77,6 +119,15 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  // Verify authentication
+  const auth = await verifyAuth(req);
+  if (!auth) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     const { 
       leadId,
@@ -88,6 +139,24 @@ Deno.serve(async (req) => {
     if (!businessData) {
       return new Response(
         JSON.stringify({ success: false, error: 'Business data is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate scope parameter
+    const validScopes = ['city', 'neighborhood', 'service_cluster'];
+    if (!validScopes.includes(scope)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid scope parameter' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate metrics parameter
+    const validMetrics = ['rating', 'reviews', 'years_active'];
+    if (!Array.isArray(metrics) || !metrics.every(m => validMetrics.includes(m))) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid metrics parameter' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -106,12 +175,16 @@ Deno.serve(async (req) => {
       .from('business_leads')
       .select('rating, reviews_count, created_at');
 
-    // Add scope-based filtering (simplified - in production would use geo data)
-    if (scope === 'city' && businessData.address) {
+    // Add scope-based filtering with sanitized input
+    if (scope === 'city' && businessData.address && typeof businessData.address === 'string') {
       // Extract city from address for filtering
       const cityMatch = businessData.address.match(/,\s*([^,]+),?\s*[A-Z]{2}/);
       if (cityMatch) {
-        query = query.ilike('address', `%${cityMatch[1]}%`);
+        const sanitizedCity = sanitizeCityName(cityMatch[1]);
+        if (sanitizedCity) {
+          query = query.ilike('address', `%${sanitizedCity}%`);
+        }
+        // If sanitization fails, skip the filter (query all peers)
       }
     }
 
