@@ -92,8 +92,8 @@ jobs:
             gosom/google-maps-scraper \
             -input /app/batch_queries.txt \
             -results /app/batch_results.csv \
-            -exit-on-inactivity 2m \
-            -depth 1 \
+            -exit-on-inactivity 3m \
+            -depth 3 \
             -c 2
 
       - name: Append results and update progress

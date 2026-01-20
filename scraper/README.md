@@ -1,28 +1,46 @@
 # Automated Dentist Scraper
 
-This scraper automatically collects dentist data from Google Maps for **1,990 cities worldwide** (500k+ population) using GitHub Actions.
+This scraper automatically collects dentist data from Google Maps using GitHub Actions with a **smart neighborhood strategy** for comprehensive coverage.
+
+## Strategy
+
+- **Megacities (10M+)**: Split into 10-20 neighborhoods each (e.g., Manhattan, Brooklyn, Queens...)
+- **Large cities (2-10M)**: Split into 5-10 key areas
+- **Medium cities (500k-2M)**: Single query with depth 3 pagination
+
+This captures far more dentists than a single query per city.
 
 ## How It Works
 
 1. **Runs 3x Daily**: At 2 AM, 10 AM, and 6 PM UTC
-2. **Batch Processing**: Scrapes 20 cities per run for fast completion
-3. **Progress Tracking**: Remembers where it left off between runs
-4. **Auto-Commit**: Results are automatically committed back to this repo
-5. **Stops on Completion**: Automatically stops when all cities are scraped (doesn't restart)
+2. **Batch Processing**: Scrapes 20 queries per run
+3. **Depth 3 Pagination**: Gets ~50-60 results per query instead of ~16
+4. **Progress Tracking**: Remembers where it left off between runs
+5. **Auto-Commit**: Results are automatically committed back to this repo
+6. **Stops on Completion**: Automatically stops when all queries are done
+
+## Coverage
+
+| Category | Count | Results/Query | Est. Total Dentists |
+|----------|-------|---------------|---------------------|
+| Megacity neighborhoods | ~450 | ~50 | ~22,500 |
+| Large city areas | ~250 | ~50 | ~12,500 |
+| Medium cities | ~420 | ~50 | ~21,000 |
+| **Total** | **~1,118** | | **~56,000** |
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `cities.txt` | List of all cities to scrape (1,990 unique cities, 500k+ population) |
-| `progress.json` | Tracks which cities have been processed |
-| `all_results.csv` | Accumulated results from all runs |
-| `generate_cities.py` | Script to regenerate cities list (auto-deduplicates) |
+| `cities.txt` | 1,118 queries (neighborhoods + cities) |
+| `progress.json` | Tracks progress |
+| `all_results.csv` | Accumulated results |
+| `generate_cities.py` | Regenerate with smart neighborhood splitting |
 
 ## Timeline
 
-- **1,990 cities ÷ 60 per day (3 runs × 20) = ~33 days** for completion
-- Automatically stops when all cities are scraped
+- **1,118 queries ÷ 60 per day = ~19 days** for completion
+- Automatically stops when all queries are scraped
 
 ## Public Repository Benefits
 
