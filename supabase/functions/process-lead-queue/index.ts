@@ -160,9 +160,10 @@ Deno.serve(async (req) => {
       // STAGE 1: Scrape websites that haven't been scraped yet
       const { data: pendingLeads, error: fetchError } = await supabase
         .from("dentist_scrapes")
-        .select("id, website, city")
+        .select("id, website, city, retry_count")
         .or("scrape_status.is.null,scrape_status.eq.pending")
         .is("text_content", null)
+        .order("id", { ascending: true })
         .limit(maxLeads);
 
       if (fetchError) {
@@ -203,15 +204,21 @@ Deno.serve(async (req) => {
           result.scrape_status = 'failed';
           result.error = scrapeError;
           
-          await supabase
+          const { error: updateError } = await supabase
             .from("dentist_scrapes")
             .update({ 
               scrape_status: 'failed',
+              processing_error: scrapeError,
+              retry_count: (lead as any).retry_count ? (lead as any).retry_count + 1 : 1,
               scraped_at: new Date().toISOString()
             })
             .eq("id", lead.id);
-        } else if (markdown) {
-          await supabase
+          
+          if (updateError) {
+            console.error(`Failed to update lead ${lead.id} as failed:`, updateError);
+          }
+        } else if (markdown && markdown.trim().length > 0) {
+          const { error: updateError } = await supabase
             .from("dentist_scrapes")
             .update({ 
               text_content: markdown,
@@ -220,6 +227,30 @@ Deno.serve(async (req) => {
               scraped_at: new Date().toISOString()
             })
             .eq("id", lead.id);
+          
+          if (updateError) {
+            console.error(`Failed to update lead ${lead.id} as scraped:`, updateError);
+            result.scrape_status = 'failed';
+            result.error = `DB update failed: ${updateError.message}`;
+          }
+        } else {
+          // Empty content - mark as failed
+          result.scrape_status = 'failed';
+          result.error = 'No content returned from scrape';
+          
+          const { error: updateError } = await supabase
+            .from("dentist_scrapes")
+            .update({ 
+              scrape_status: 'failed',
+              processing_error: 'Empty content returned',
+              retry_count: (lead as any).retry_count ? (lead as any).retry_count + 1 : 1,
+              scraped_at: new Date().toISOString()
+            })
+            .eq("id", lead.id);
+          
+          if (updateError) {
+            console.error(`Failed to update lead ${lead.id} as empty:`, updateError);
+          }
         }
 
         results.push(result);
