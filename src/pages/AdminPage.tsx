@@ -96,7 +96,9 @@ const AdminPage = () => {
   const [stats, setStats] = useState<PipelineStats>({
     pending: 0, scraped: 0, processed: 0, failed: 0, total: 0, hasContent: 0, hasSeo: 0
   });
-  const [recentLeads, setRecentLeads] = useState<RecentLead[]>([]);
+  const [allLeads, setAllLeads] = useState<RecentLead[]>([]);
+  const [scrapedLeads, setScrapedLeads] = useState<RecentLead[]>([]);
+  const [processedLeads, setProcessedLeads] = useState<RecentLead[]>([]);
   const [processing, setProcessing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [leadsTab, setLeadsTab] = useState<string>("all");
@@ -128,14 +130,30 @@ const AdminPage = () => {
         });
       }
 
-      // Get recent leads
-      const { data: leads } = await supabase
-        .from('dentist_scrapes')
-        .select('id, business_name, city, place_id, scrape_status, scraped_at, processed_at, processing_error')
-        .order('id', { ascending: false })
-        .limit(20);
+      // Get leads for each tab separately
+      const [allResult, scrapedResult, processedResult] = await Promise.all([
+        supabase
+          .from('dentist_scrapes')
+          .select('id, business_name, city, place_id, scrape_status, scraped_at, processed_at, processing_error')
+          .order('id', { ascending: false })
+          .limit(20),
+        supabase
+          .from('dentist_scrapes')
+          .select('id, business_name, city, place_id, scrape_status, scraped_at, processed_at, processing_error')
+          .eq('scrape_status', 'scraped')
+          .order('id', { ascending: false })
+          .limit(20),
+        supabase
+          .from('dentist_scrapes')
+          .select('id, business_name, city, place_id, scrape_status, scraped_at, processed_at, processing_error')
+          .eq('scrape_status', 'processed')
+          .order('id', { ascending: false })
+          .limit(20)
+      ]);
 
-      setRecentLeads(leads || []);
+      setAllLeads(allResult.data || []);
+      setScrapedLeads(scrapedResult.data || []);
+      setProcessedLeads(processedResult.data || []);
       setLastRefresh(new Date());
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -506,18 +524,18 @@ const AdminPage = () => {
               <CardContent className="space-y-4">
                 <Tabs value={leadsTab} onValueChange={setLeadsTab}>
                   <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="all">All ({recentLeads.length})</TabsTrigger>
+                    <TabsTrigger value="all">All ({allLeads.length})</TabsTrigger>
                     <TabsTrigger value="scraped">
-                      Scraped ({recentLeads.filter(l => l.scrape_status === 'scraped').length})
+                      Scraped ({scrapedLeads.length})
                     </TabsTrigger>
                     <TabsTrigger value="processed">
-                      SEO Complete ({recentLeads.filter(l => l.scrape_status === 'processed').length})
+                      SEO Complete ({processedLeads.length})
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="all" className="mt-4">
                     <LeadsList 
-                      leads={recentLeads} 
+                      leads={allLeads} 
                       getStatusIcon={getStatusIcon} 
                       getStatusBadge={getStatusBadge}
                       showProfileLink={false}
@@ -526,7 +544,7 @@ const AdminPage = () => {
 
                   <TabsContent value="scraped" className="mt-4">
                     <LeadsList 
-                      leads={recentLeads.filter(l => l.scrape_status === 'scraped')} 
+                      leads={scrapedLeads} 
                       getStatusIcon={getStatusIcon} 
                       getStatusBadge={getStatusBadge}
                       showProfileLink={false}
@@ -535,7 +553,7 @@ const AdminPage = () => {
 
                   <TabsContent value="processed" className="mt-4">
                     <LeadsList 
-                      leads={recentLeads.filter(l => l.scrape_status === 'processed')} 
+                      leads={processedLeads} 
                       getStatusIcon={getStatusIcon} 
                       getStatusBadge={getStatusBadge}
                       showProfileLink={true}
