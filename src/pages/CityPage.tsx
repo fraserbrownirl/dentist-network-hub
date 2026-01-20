@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Clock, Star, Mail, ArrowLeft, Phone, Calendar } from "lucide-react";
+import { MapPin, Clock, Star, Mail, ArrowLeft, Phone, Calendar, Globe, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -24,10 +24,23 @@ interface Offer {
   };
 }
 
+interface DentistListing {
+  id: number;
+  place_id: string;
+  business_name: string;
+  seo_title: string;
+  seo_description: string;
+  rating: number;
+  review_count: number;
+  phone: string;
+  website: string;
+}
+
 const CityPage = () => {
   const { citySlug } = useParams<{ citySlug: string }>();
   const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [dentists, setDentists] = useState<DentistListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [subscribing, setSubscribing] = useState(false);
@@ -42,7 +55,7 @@ const CityPage = () => {
       if (!citySlug) return;
 
       try {
-        // Fetch city data
+        // Fetch city data from cities table
         const { data: cityInfo } = await supabase
           .from('cities')
           .select('*')
@@ -51,7 +64,22 @@ const CityPage = () => {
 
         setCityData(cityInfo);
 
-        // Fetch active offers for this city
+        // Fetch dentists from dentist_scrapes for this city
+        const { data: dentistData, error: dentistError } = await supabase
+          .from('dentist_scrapes')
+          .select('id, place_id, business_name, seo_title, seo_description, rating, review_count, phone, website')
+          .ilike('city', `%${cityName}%`)
+          .not('seo_title', 'is', null)
+          .order('rating', { ascending: false })
+          .limit(50);
+
+        if (dentistError) {
+          console.error('Error fetching dentists:', dentistError);
+        } else {
+          setDentists(dentistData || []);
+        }
+
+        // Fetch active offers for this city (if city exists in cities table)
         if (cityInfo) {
           const { data: offersData, error } = await supabase
             .from('offers')
@@ -84,7 +112,7 @@ const CityPage = () => {
     };
 
     fetchCityDataAndOffers();
-  }, [citySlug]);
+  }, [citySlug, cityName]);
 
   const handleEmailSubscribe = async () => {
     if (!email || !cityData?.id) return;
@@ -170,7 +198,7 @@ const CityPage = () => {
                       <div>
                         <CardTitle className="text-xl">{offer.title}</CardTitle>
                         <CardDescription className="flex items-center gap-1 mt-1">
-                          <Star className="h-4 w-4 text-yellow-500" />
+                          <Star className="h-4 w-4 text-primary" />
                           {offer.dentist.practice_name}
                         </CardDescription>
                       </div>
@@ -251,6 +279,69 @@ const CityPage = () => {
                 </p>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Dentist Listings Section */}
+        {dentists.length > 0 && (
+          <div className="mt-16">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-2">Dentists in {cityName}</h2>
+              <p className="text-muted-foreground">
+                {dentists.length} dental practices with verified profiles
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {dentists.map((dentist) => (
+                <Link 
+                  key={dentist.id} 
+                  to={`/dentist/${dentist.place_id}`}
+                  className="block"
+                >
+                  <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start gap-2">
+                        <CardTitle className="text-lg leading-tight">
+                          {dentist.business_name}
+                        </CardTitle>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      </div>
+                      {dentist.rating && (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Star className="h-4 w-4 text-primary fill-primary" />
+                          <span className="font-medium">{dentist.rating}</span>
+                          {dentist.review_count && (
+                            <span className="text-muted-foreground">
+                              ({dentist.review_count} reviews)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {dentist.seo_description || 'Professional dental care services'}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {dentist.phone && (
+                          <Badge variant="outline" className="text-xs">
+                            <Phone className="h-3 w-3 mr-1" />
+                            Has Phone
+                          </Badge>
+                        )}
+                        {dentist.website && (
+                          <Badge variant="outline" className="text-xs">
+                            <Globe className="h-3 w-3 mr-1" />
+                            Has Website
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 
