@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,9 @@ import { Progress } from '@/components/ui/progress';
 import { 
   Loader2, Globe, Sparkles, ArrowRight, Quote, Shield, Code, 
   ChevronDown, Copy, Check, AlertTriangle, CheckCircle2,
-  TrendingUp, BarChart3
+  TrendingUp, BarChart3, Activity
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import type { 
   AuthoritySignal, 
   ComparativePosition, 
@@ -92,6 +93,13 @@ function getConfidenceLabel(confidence: number): string {
   return 'Very Low';
 }
 
+interface UsageStats {
+  total: number;
+  monthly: number;
+  daily: number;
+  lastScrape: string | null;
+}
+
 export default function ScrapeTestPage() {
   const { toast } = useToast();
   const [url, setUrl] = useState('https://www.209nycdental.com/');
@@ -107,6 +115,40 @@ export default function ScrapeTestPage() {
   const [copiedFact, setCopiedFact] = useState<number | null>(null);
   const [copiedSchema, setCopiedSchema] = useState(false);
   const [worstChunkOpen, setWorstChunkOpen] = useState(false);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [isLoadingUsage, setIsLoadingUsage] = useState(true);
+
+  // Fetch usage stats
+  useEffect(() => {
+    const fetchUsageStats = async () => {
+      try {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+        // Fetch all counts in parallel
+        const [totalResult, monthlyResult, dailyResult, lastScrapeResult] = await Promise.all([
+          supabase.from('scrape_usage').select('id', { count: 'exact', head: true }),
+          supabase.from('scrape_usage').select('id', { count: 'exact', head: true }).gte('scraped_at', startOfMonth),
+          supabase.from('scrape_usage').select('id', { count: 'exact', head: true }).gte('scraped_at', startOfDay),
+          supabase.from('scrape_usage').select('scraped_at').order('scraped_at', { ascending: false }).limit(1),
+        ]);
+
+        setUsageStats({
+          total: totalResult.count || 0,
+          monthly: monthlyResult.count || 0,
+          daily: dailyResult.count || 0,
+          lastScrape: lastScrapeResult.data?.[0]?.scraped_at || null,
+        });
+      } catch (error) {
+        console.error('Failed to fetch usage stats:', error);
+      } finally {
+        setIsLoadingUsage(false);
+      }
+    };
+
+    fetchUsageStats();
+  }, [scrapedData]); // Refetch when a new scrape completes
 
   const copyToClipboard = async (text: string, factIndex?: number) => {
     await navigator.clipboard.writeText(text);
@@ -264,6 +306,49 @@ export default function ScrapeTestPage() {
             Scrape websites, generate LLM-optimized content with confidence-weighted authority signals
           </p>
         </div>
+
+        {/* Usage Stats */}
+        <Card className="mb-6 border-dashed">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+              <Activity className="h-4 w-4" />
+              Firecrawl Usage
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingUsage ? (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading usage stats...
+              </div>
+            ) : usageStats ? (
+              <div className="flex flex-wrap gap-6 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Total:</span>{' '}
+                  <span className="font-semibold">{usageStats.total.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">This Month:</span>{' '}
+                  <span className="font-semibold">{usageStats.monthly.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Today:</span>{' '}
+                  <span className="font-semibold">{usageStats.daily.toLocaleString()}</span>
+                </div>
+                {usageStats.lastScrape && (
+                  <div>
+                    <span className="text-muted-foreground">Last Scrape:</span>{' '}
+                    <span className="font-semibold">
+                      {new Date(usageStats.lastScrape).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted-foreground text-sm">No usage data yet</span>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Controls */}
         <Card className="mb-6">

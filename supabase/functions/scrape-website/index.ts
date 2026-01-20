@@ -1,9 +1,34 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Max-Age': '86400',
 };
+
+// Log usage to database
+async function logUsage(url: string, status: 'success' | 'error', errorMessage?: string) {
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.warn('Supabase credentials not available for usage logging');
+      return;
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    await supabase.from('scrape_usage').insert({
+      url,
+      status,
+      error_message: errorMessage || null,
+    });
+  } catch (err) {
+    console.warn('Failed to log usage:', err);
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -54,6 +79,7 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       console.error('Firecrawl API error:', data);
+      await logUsage(formattedUrl, 'error', data.error || `Request failed with status ${response.status}`);
       return new Response(
         JSON.stringify({ success: false, error: data.error || `Request failed with status ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -61,6 +87,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('Scrape successful');
+    await logUsage(formattedUrl, 'success');
     return new Response(
       JSON.stringify(data),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -68,6 +95,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error scraping:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to scrape';
+    await logUsage('unknown', 'error', errorMessage);
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
