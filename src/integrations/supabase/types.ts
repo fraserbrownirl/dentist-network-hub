@@ -339,41 +339,101 @@ export type Database = {
       dentist_scrapes: {
         Row: {
           batch_number: number | null
+          business_name: string | null
+          category: string | null
           city: string
           city_id: number | null
           created_at: string | null
           email: string | null
+          faq: Json | null
+          google_maps_link: string | null
           has_content: boolean | null
           has_email: boolean | null
           id: number
+          latitude: number | null
+          longitude: number | null
+          open_hours: string | null
+          phone: string | null
+          place_id: string | null
+          processed_at: string | null
+          processing_error: string | null
+          profile_content: string | null
+          rating: number | null
+          retry_count: number | null
+          review_count: number | null
+          scrape_status: string | null
           scraped_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          services: Json | null
           text_content: string | null
+          unique_features: Json | null
           website: string
         }
         Insert: {
           batch_number?: number | null
+          business_name?: string | null
+          category?: string | null
           city: string
           city_id?: number | null
           created_at?: string | null
           email?: string | null
+          faq?: Json | null
+          google_maps_link?: string | null
           has_content?: boolean | null
           has_email?: boolean | null
           id?: number
+          latitude?: number | null
+          longitude?: number | null
+          open_hours?: string | null
+          phone?: string | null
+          place_id?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          profile_content?: string | null
+          rating?: number | null
+          retry_count?: number | null
+          review_count?: number | null
+          scrape_status?: string | null
           scraped_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          services?: Json | null
           text_content?: string | null
+          unique_features?: Json | null
           website: string
         }
         Update: {
           batch_number?: number | null
+          business_name?: string | null
+          category?: string | null
           city?: string
           city_id?: number | null
           created_at?: string | null
           email?: string | null
+          faq?: Json | null
+          google_maps_link?: string | null
           has_content?: boolean | null
           has_email?: boolean | null
           id?: number
+          latitude?: number | null
+          longitude?: number | null
+          open_hours?: string | null
+          phone?: string | null
+          place_id?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          profile_content?: string | null
+          rating?: number | null
+          retry_count?: number | null
+          review_count?: number | null
+          scrape_status?: string | null
           scraped_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          services?: Json | null
           text_content?: string | null
+          unique_features?: Json | null
           website?: string
         }
         Relationships: []
