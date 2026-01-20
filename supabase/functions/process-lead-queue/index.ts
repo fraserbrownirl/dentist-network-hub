@@ -309,15 +309,42 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if there are more leads to process
-    const { count: pendingCount } = await supabase
+    // Check remaining counts for each stage
+    const { count: pendingScrapeCount } = await supabase
       .from("dentist_scrapes")
       .select("*", { count: 'exact', head: true })
-      .or("scrape_status.is.null,scrape_status.eq.pending,scrape_status.eq.scraped");
+      .or("scrape_status.is.null,scrape_status.eq.pending")
+      .is("text_content", null);
 
-    const shouldContinue = (pendingCount || 0) > 0;
+    const { count: pendingGenerateCount } = await supabase
+      .from("dentist_scrapes")
+      .select("*", { count: 'exact', head: true })
+      .eq("scrape_status", "scraped")
+      .not("text_content", "is", null);
 
-    console.log(`Processed ${results.length} leads. Remaining: ${pendingCount}`);
+    const totalRemaining = (pendingScrapeCount || 0) + (pendingGenerateCount || 0);
+    const shouldContinue = totalRemaining > 0;
+
+    console.log(`Processed ${results.length} leads. Pending scrape: ${pendingScrapeCount}, Pending generate: ${pendingGenerateCount}`);
+
+    // AUTO-CONTINUATION: Self-invoke if there's more work to do
+    if (shouldContinue && results.length > 0) {
+      // Determine next stage: prioritize scraping, then generation
+      const nextStage = (pendingScrapeCount || 0) > 0 ? 'scrape' : 'generate';
+      
+      console.log(`Auto-continuing with stage: ${nextStage}`);
+      
+      // Fire-and-forget: trigger next batch without waiting
+      const functionUrl = `${supabaseUrl}/functions/v1/process-lead-queue`;
+      fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stage: nextStage, batch_size: BATCH_SIZE }),
+      }).catch(err => console.error('Auto-continuation failed:', err));
+    }
 
     return new Response(
       JSON.stringify({
@@ -325,8 +352,13 @@ Deno.serve(async (req) => {
         stage,
         processed: results.length,
         results,
-        remaining: pendingCount,
-        should_continue: shouldContinue
+        remaining: {
+          scrape: pendingScrapeCount || 0,
+          generate: pendingGenerateCount || 0,
+          total: totalRemaining
+        },
+        should_continue: shouldContinue,
+        auto_continued: shouldContinue && results.length > 0
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
