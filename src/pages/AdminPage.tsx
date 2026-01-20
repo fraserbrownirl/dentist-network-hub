@@ -26,11 +26,68 @@ interface RecentLead {
   id: number;
   business_name: string;
   city: string;
+  place_id: string | null;
   scrape_status: string;
   scraped_at: string | null;
   processed_at: string | null;
   processing_error: string | null;
 }
+
+interface LeadsListProps {
+  leads: RecentLead[];
+  getStatusIcon: (status: string | null) => JSX.Element;
+  getStatusBadge: (status: string | null) => JSX.Element;
+  showProfileLink: boolean;
+}
+
+const LeadsList = ({ leads, getStatusIcon, getStatusBadge, showProfileLink }: LeadsListProps) => {
+  if (leads.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground">No leads found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {leads.map((lead) => (
+        <div 
+          key={lead.id} 
+          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            {getStatusIcon(lead.scrape_status)}
+            <div>
+              <p className="font-medium text-sm">
+                {lead.business_name || `Lead #${lead.id}`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {lead.city || 'Unknown city'}
+                {lead.processing_error && (
+                  <span className="text-destructive ml-2">
+                    • {lead.processing_error}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {getStatusBadge(lead.scrape_status)}
+            {showProfileLink && lead.place_id && (
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/dentist/${lead.place_id}`}>
+                  View Listing
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -42,6 +99,7 @@ const AdminPage = () => {
   const [recentLeads, setRecentLeads] = useState<RecentLead[]>([]);
   const [processing, setProcessing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [leadsTab, setLeadsTab] = useState<string>("all");
 
   const loadPipelineStats = useCallback(async () => {
     try {
@@ -73,7 +131,7 @@ const AdminPage = () => {
       // Get recent leads
       const { data: leads } = await supabase
         .from('dentist_scrapes')
-        .select('id, business_name, city, scrape_status, scraped_at, processed_at, processing_error')
+        .select('id, business_name, city, place_id, scrape_status, scraped_at, processed_at, processing_error')
         .order('id', { ascending: false })
         .limit(20);
 
@@ -445,47 +503,45 @@ const AdminPage = () => {
                   Latest 20 leads in the pipeline
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {recentLeads.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No leads in pipeline</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {recentLeads.map((lead) => (
-                      <div 
-                        key={lead.id} 
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          {getStatusIcon(lead.scrape_status)}
-                          <div>
-                            <p className="font-medium text-sm">
-                              {lead.business_name || `Lead #${lead.id}`}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {lead.city || 'Unknown city'}
-                              {lead.processing_error && (
-                                <span className="text-destructive ml-2">
-                                  • {lead.processing_error}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {getStatusBadge(lead.scrape_status)}
-                          {lead.scrape_status === 'processed' && lead.id && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/dentist/${lead.id}`}>View</Link>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <CardContent className="space-y-4">
+                <Tabs value={leadsTab} onValueChange={setLeadsTab}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all">All ({recentLeads.length})</TabsTrigger>
+                    <TabsTrigger value="scraped">
+                      Scraped ({recentLeads.filter(l => l.scrape_status === 'scraped').length})
+                    </TabsTrigger>
+                    <TabsTrigger value="processed">
+                      SEO Complete ({recentLeads.filter(l => l.scrape_status === 'processed').length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="all" className="mt-4">
+                    <LeadsList 
+                      leads={recentLeads} 
+                      getStatusIcon={getStatusIcon} 
+                      getStatusBadge={getStatusBadge}
+                      showProfileLink={false}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="scraped" className="mt-4">
+                    <LeadsList 
+                      leads={recentLeads.filter(l => l.scrape_status === 'scraped')} 
+                      getStatusIcon={getStatusIcon} 
+                      getStatusBadge={getStatusBadge}
+                      showProfileLink={false}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="processed" className="mt-4">
+                    <LeadsList 
+                      leads={recentLeads.filter(l => l.scrape_status === 'processed')} 
+                      getStatusIcon={getStatusIcon} 
+                      getStatusBadge={getStatusBadge}
+                      showProfileLink={true}
+                    />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>
