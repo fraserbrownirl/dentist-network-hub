@@ -606,6 +606,30 @@ export type Database = {
           },
         ]
       }
+      scrape_usage: {
+        Row: {
+          error_message: string | null
+          id: string
+          scraped_at: string
+          status: string
+          url: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          scraped_at?: string
+          status: string
+          url: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          scraped_at?: string
+          status?: string
+          url?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           city_id: string | null
