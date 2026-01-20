@@ -198,13 +198,35 @@ Deno.serve(async (req) => {
 
     console.log(`Sync complete: ${inserted} inserted, ${errors} errors`);
 
+    // Trigger the processing queue to start processing new leads
+    if (inserted > 0) {
+      try {
+        const processUrl = `${supabaseUrl}/functions/v1/process-lead-queue`;
+        console.log(`Triggering processing queue at: ${processUrl}`);
+        
+        // Fire and forget - don't wait for processing to complete
+        fetch(processUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ stage: 'scrape', batch_size: 5 }),
+        }).catch(err => console.error('Failed to trigger processing:', err));
+      } catch (triggerError) {
+        console.error('Error triggering processing queue:', triggerError);
+        // Don't fail the webhook response if trigger fails
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         batch_number: batchNumber,
         total_records: dentists.length,
         inserted: inserted,
-        errors: errors
+        errors: errors,
+        processing_triggered: inserted > 0
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
