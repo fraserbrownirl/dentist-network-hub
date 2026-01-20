@@ -91,7 +91,8 @@ const AuthPage = () => {
       if (error) throw error;
 
       if (data.user) {
-        toast.success("Account created! Please check your email to verify your account.");
+        toast.success("Account created successfully!");
+        // With auto-confirm enabled, the user is immediately logged in
       }
     } catch (error: any) {
       toast.error(error.message || "Signup failed");
