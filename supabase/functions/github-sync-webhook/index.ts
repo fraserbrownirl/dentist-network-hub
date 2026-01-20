@@ -169,18 +169,36 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Parse numeric values
+        const rating = dentist.review_rating ? parseFloat(dentist.review_rating) : null;
+        const reviewCount = dentist.review_count ? parseInt(dentist.review_count, 10) : null;
+        const latitude = dentist.latitude ? parseFloat(dentist.latitude) : null;
+        const longitude = dentist.longitude ? parseFloat(dentist.longitude) : null;
+
         const { error } = await supabase
           .from("dentist_scrapes")
           .upsert({
+            // Use place_id as primary conflict target if available, fallback to website
+            place_id: dentist.place_id || null,
             website: dentist.website,
+            business_name: dentist.title || null,
             city: city,
             email: email,
+            phone: dentist.phone || null,
+            latitude: latitude,
+            longitude: longitude,
+            rating: rating,
+            review_count: reviewCount,
+            category: dentist.category || null,
+            open_hours: dentist.open_hours || null,
+            google_maps_link: dentist.link || null,
             batch_number: batchNumber,
             scraped_at: new Date().toISOString(),
             has_email: !!email,
-            has_content: false, // Will be updated when we scrape the website
+            has_content: false,
+            scrape_status: 'pending',
           }, {
-            onConflict: "website",
+            onConflict: dentist.place_id ? "place_id" : "website",
             ignoreDuplicates: false
           });
 

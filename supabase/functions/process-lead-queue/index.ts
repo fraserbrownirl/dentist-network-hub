@@ -284,24 +284,18 @@ Deno.serve(async (req) => {
           // Keep as scraped so we can retry later
           console.error(`AI generation failed for ${lead.website}:`, aiError);
         } else if (content) {
-          // Update the lead with generated content
-          // Store the SEO content in text_content as JSON (or create a new column)
-          const seoContent = JSON.stringify({
-            original_content: lead.text_content?.substring(0, 5000), // Truncate original
-            seo_title: content.seo_title,
-            seo_description: content.seo_description,
-            profile_content: content.profile_content,
-            services: content.services,
-            unique_features: content.unique_features,
-            faq: content.faq,
-            generated_at: new Date().toISOString()
-          });
-
+          // Store SEO content in dedicated columns, keep original markdown in text_content
           await supabase
             .from("dentist_scrapes")
             .update({ 
-              text_content: seoContent,
-              scrape_status: 'processed'
+              seo_title: content.seo_title || null,
+              seo_description: content.seo_description || null,
+              profile_content: content.profile_content || null,
+              services: content.services || null,
+              unique_features: content.unique_features || null,
+              faq: content.faq || null,
+              scrape_status: 'processed',
+              processed_at: new Date().toISOString()
             })
             .eq("id", lead.id);
         }
