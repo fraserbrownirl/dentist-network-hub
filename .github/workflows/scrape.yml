@@ -29,7 +29,21 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Check if scraping should stop
+        id: date_check
+        run: |
+          STOP_DATE="2026-01-31"
+          TODAY=$(date -u +%Y-%m-%d)
+          if [[ "$TODAY" > "$STOP_DATE" ]]; then
+            echo "Scraping period ended on $STOP_DATE. Today is $TODAY. Stopping."
+            echo "expired=true" >> $GITHUB_OUTPUT
+          else
+            echo "Scraping continues. Today: $TODAY, Stop date: $STOP_DATE"
+            echo "expired=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get next batch of cities
+        if: steps.date_check.outputs.expired != 'true'
         id: batch
         run: |
           python3 << 'EOF'
@@ -85,7 +99,7 @@ jobs:
           EOF
 
       - name: Run Google Maps Scraper
-        if: steps.batch.outputs.completed != 'true'
+        if: steps.date_check.outputs.expired != 'true' && steps.batch.outputs.completed != 'true'
         run: |
           docker run --rm \
             -v ${{ github.workspace }}/scraper:/app \
@@ -97,7 +111,7 @@ jobs:
             -c 2
 
       - name: Sync to database
-        if: steps.batch.outputs.completed != 'true'
+        if: steps.date_check.outputs.expired != 'true' && steps.batch.outputs.completed != 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
@@ -110,7 +124,7 @@ jobs:
           fi
 
       - name: Append results and update progress
-        if: steps.batch.outputs.completed != 'true'
+        if: steps.date_check.outputs.expired != 'true' && steps.batch.outputs.completed != 'true'
         run: |
           python3 << 'EOF'
           import json
@@ -173,10 +187,12 @@ jobs:
           EOF
 
       - name: Clean up temp files
+        if: steps.date_check.outputs.expired != 'true'
         run: |
           rm -f scraper/batch_queries.txt
 
       - name: Commit results
+        if: steps.date_check.outputs.expired != 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
